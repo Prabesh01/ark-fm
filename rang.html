@@ -1,6 +1,12 @@
 <!DOCTYPE html>
+<!--
+Design idea taken from:
+- https://www.adultswim.com/where-to-watch
+- https://www.bloombergradio.com/
+-->
 <html lang="en">
 <head>
+<title>Listen to Ark FM</title>
     <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 <link rel='stylesheet' id='styles-css' href='style.min.css' type='text/css' media='all' />
@@ -186,6 +192,207 @@ color: #aaa;
       .lead{font-size:14px}
       .btn{padding:10px 18px;font-size:13px}
     }
+
+
+        .audio-player {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #000;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .player-left {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+
+        .player-right {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            flex: 1;
+        }
+
+        .play-pause-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            margin-right: 15px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .play-pause-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .thumbnail {
+            width: 50px;
+            height: 50px;
+            border-radius: 4px;
+            margin-right: 15px;
+            background-color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .song-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .song-name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .artist-name {
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        .volume-controls {
+            display: flex;
+            align-items: center;
+            margin-right: 15px;
+        }
+
+        .mute-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            margin-right: 10px;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .mute-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .volume-slider {
+            -webkit-appearance: none;
+            width: 100px;
+            height: 4px;
+            border-radius: 2px;
+            background: #555;
+            outline: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #1DB954;
+            cursor: pointer;
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #1DB954;
+            cursor: pointer;
+            border: none;
+        }
+
+        .source-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .source-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            .audio-player {
+                padding: 10px 15px;
+            }
+            
+            .thumbnail {
+                width: 40px;
+                height: 40px;
+                margin-right: 10px;
+            }
+            
+            .song-name {
+                font-size: 13px;
+            }
+            
+            .artist-name {
+                font-size: 11px;
+            }
+            
+            .volume-slider {
+                width: 80px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .audio-player {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .player-left, .player-right {
+                flex: none;
+                width: 100%;
+            }
+            
+            .player-right {
+                margin-top: 10px;
+                justify-content: space-between;
+            }
+            
+            .volume-controls {
+                margin-right: 0;
+            }
+        }
 
 </style>
 </head>
@@ -476,10 +683,95 @@ color: #aaa;
 <a target="_blank" href="https://www.facebook.com/medisno/"><i class="fa fa-facebook-f"></i></a>
 <a target="_blank" href="https://www.youtube.com/@medisno"><i class="fa fa-youtube"></i></a>
 <a target="_blank" href="mailto:arkfm@cote.ws"><i class="fa fa-envelope"></i></a>
-<!--        <p>&copy; 2023 FM Radio. All rights reserved.</p> -->
+<p>Medisno Solutions<br>Pokhara, Nepal<br></p><br>
     </section>
+    <audio id="audioElement" controls>
+        <source src="https://ice6.somafm.com/folkfwd-128-mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+    <div class="audio-player">
+        <div class="player-left">
+            <button class="play-pause-btn" id="playPauseBtn">▶</button>
+            <div class="thumbnail">
+                <img id="pragram-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z'/%3E%3C/svg%3E" alt="Album Art">
+            </div>
+            <div class="song-info">
+                <div id="program" class="song-name">Summer Vibes</div>
+                <div id="title" class="artist-name">The Ocean Waves</div>
+            </div>
+        </div>
+        
+        <div class="player-right">
+            <div class="volume-controls">
+                <button class="mute-btn" id="muteBtn">🔊</button>
+                <input type="range" min="0" max="100" value="80" class="volume-slider" id="volumeSlider">
+            </div>
+            <a title="stream source" id="source-url" style="text-decoration:none;" target="_blank" href="http://google.com"><button class="source-btn" id="sourceBtn">ⓘ</button></a>
+        </div>
+    </div>
 
 <script type="text/javascript" src="libraries.min.js" id="vendor-scripts-js"></script>
 <script type="text/javascript" src="scripts.js" id="custom-scripts-js"></script>
+
+    <script>
+        const audio = document.getElementById('audioElement');
+
+        // Audio player functionality
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const muteBtn = document.getElementById('muteBtn');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const sourceBtn = document.getElementById('sourceBtn');
+        
+        audio.volume = volumeSlider.value / 100;
+
+        let isPlaying = false;
+        let isMuted = false;
+        let lastVolume = volumeSlider.value;
+        
+        // Play/Pause functionality
+        playPauseBtn.addEventListener('click', function() {
+            if (audio.paused) {
+                audio.play();
+                playPauseBtn.textContent = '❚❚';
+            } else {
+                audio.pause();
+                playPauseBtn.textContent = '▶';
+            }
+        });
+        
+        audio.addEventListener('ended', function() {
+            audio.muted = !audio.muted;
+            playPauseBtn.textContent = '▶';
+        });
+
+        // Mute/Unmute functionality
+        muteBtn.addEventListener('click', function() {
+            audio.muted = !audio.muted;
+            muteBtn.textContent = audio.muted ? '🔇' : '🔊';
+        });
+        
+        // Volume slider functionality
+        volumeSlider.addEventListener('input', function() {
+            audio.volume = volumeSlider.value / 100;
+
+            const volume = audio.volume;
+            
+            // Update mute button state based on volume
+            if (volume == 0) {
+                audio.muted = true;
+                muteBtn.textContent = '🔇';
+            } else {
+                audio.muted = false;
+                muteBtn.textContent = '🔊';
+            }
+        });
+
+        // Update volume slider when audio volume changes (for external changes)
+        audio.addEventListener('volumechange', function() {
+            if (!audio.muted) {
+                volumeSlider.value = audio.volume * 100;
+            }
+        });        
+    </script>
 
 </html>
