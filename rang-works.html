@@ -5,52 +5,6 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 <link rel='stylesheet' id='styles-css' href='style.min.css' type='text/css' media='all' />
 <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background: #0a0a0a;
-            color: #fff;
-        }
-
-        .nav {
-            background: #000;
-            padding: 1.2rem 3rem;
-            border-bottom: 3px solid #667eea;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        .nav .logo {
-            font-size: 1.5rem;
-            font-weight: 900;
-            letter-spacing: 4px;
-            color: white;
-            text-transform: uppercase;
-            position: relative;
-            display: inline-block;
-        }
-
-        .nav .logo::after {
-            content: '';
-            position: absolute;
-            bottom: -8px;
-            left: 0;
-            width: 60%;
-            height: 3px;
-            background: linear-gradient(90deg, #667eea, transparent);
-        }
-.section {
-        width: 100%;
-        margin-right: auto;
-        margin-left: auto;
-}
-
-}
-
 /*
 .current-show .show-slot {
     background-color: #e3f2fd;
@@ -78,127 +32,9 @@
     line-height: 1;
 }
 
-    .wrap{max-width:1280px;margin:0 auto;}
-
-    header{
-      margin-bottom:28px;
-    }
-
-    h1{
-      color:white;
-      font-size:36px;
-      font-weight:700;
-      margin-bottom:8px;
-      letter-spacing:0.2px;
-    }
-
-    p.lead{
-      color:#cfcfcf;
-      font-size:16px;
-      margin-bottom:34px;
-    }
-
-    /* gallery layout */
-    .gallery{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:40px;
-      align-items:stretch;
-    }
-
-    .card{
-      cursor: pointer;
-      background:#111;
-      height:320px;
-      border-radius:2px;
-      overflow:hidden;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      position:relative;
-      box-shadow:0 2px 0 rgba(255,255,255,0.03) inset;
-    }
-
-    /* Use the provided combined image and show left/right halves */
-    .card.left{
-      background-image: url('cover2.jpg');
-      background-size:auto;
-      background-position:left center;
-    }
-
-    .card.right{
-      background-image: url('hp.jpg');
-      background-size: cover;
-      background-position:right center;
-    }
-
-    /* Maintain the large thumbnail look on wide screens */
-    .card::after{
-      /* subtle overlay to mimic the screenshot's darker look */
-      content:'';position:absolute;inset:0;background:linear-gradient(rgba(0,0,0,0.06), rgba(0,0,0,0));pointer-events:none;
-    }
-
-    .card:hover{
-      border:2px solid #fff;
-      box-shadow:0 0 15px rgba(255,255,255,0.3);
-      transform:translateY(-3px);
-    }
-
-    /* center the button underneath */
-    .cta-wrap{display:flex;justify-content:center;margin-top:40px}
-
-    .btn{
-      display:inline-block;
-      padding:14px 28px;
-      border:2px solid #ffe700; /* bright yellow border */
-      color:#fff;
-      text-decoration:none;
-      letter-spacing:2px;
-      font-size:14px;
-      background:transparent;
-      transition:background .18s, color .18s, transform .08s;
-      border-radius:2px;
-    }
-
-    .btn:hover{border:2px solid #fff; color:white;}
-
-        .footer {
-            background-color: #1a1a1a;
-            color: #aaa;
-            text-align: center;
-            margin-top: 50px;
-        }
-.footer i {
-font-size: 24px; padding:15px;
-cursor: pointer;
-color: #aaa;
-}
-    /* Responsive behavior: on small screens stack vertically and reduce heights */
-    @media (max-width:900px){
-      body{padding:28px}
-      h1{font-size:28px}
-      .gallery{grid-template-columns:1fr;gap:24px}
-      .card{height:220px}
-    }
-
-    @media (max-width:420px){
-      .card{height:160px}
-      .lead{font-size:14px}
-      .btn{padding:10px 18px;font-size:13px}
-    }
-
 </style>
 </head>
 <body>
-<!--
-        <nav class="nav">
-            <a href=""><div class="logo">ARK FM</div></a>
-        </nav>
--->
-    <section>
-<img src="cover3.jpg" style="height:auto;width:100%">
-    </section>
-<section style="background:white;">
 <div class="container">
     <div class="schedule-mini">
 
@@ -452,32 +288,7 @@ color: #aaa;
         <button class="fa fa-chevron-left" role="button" aria-label="Previous"></button>
         <button class="fa fa-chevron-right" role="button" aria-label="Next"></button>
     </div>
-</div>
-</section>
-  <div class="container wrap">
-    <header>
-      <h1>Listen us worldwide</h1>
-      <!-- <p class="lead">Waste your time with us</p> -->
-    </header>
 
-    <main>
-      <section class="gallery">
-        <a href=""><div class="card left" role="img" aria-label="Website thumbnail"></div></a>
-        <a href="https://www.hamropatro.com/radio/ARK-FM"><div class="card right" role="img" aria-label="Hamropatr thumbnail"></div></a>
-      </section>
-
-      <div class="cta-wrap">
-        <a class="btn" href="#top">BACK TO TOP</a>
-      </div>
-    </main>
-  </div>
-
-    <section class="footer">
-<a target="_blank" href="https://www.facebook.com/medisno/"><i class="fa fa-facebook-f"></i></a>
-<a target="_blank" href="https://www.youtube.com/@medisno"><i class="fa fa-youtube"></i></a>
-<a target="_blank" href="mailto:arkfm@cote.ws"><i class="fa fa-envelope"></i></a>
-<!--        <p>&copy; 2023 FM Radio. All rights reserved.</p> -->
-    </section>
 
 <script type="text/javascript" src="libraries.min.js" id="vendor-scripts-js"></script>
 <script type="text/javascript" src="scripts.js" id="custom-scripts-js"></script>
