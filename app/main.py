@@ -6,15 +6,80 @@ import secrets
 from datetime import datetime
 import os
 
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+import atexit
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secrets.token_hex(16)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
+scheduler = BackgroundScheduler()
+scheduler.start()
+atexit.register(lambda: scheduler.shutdown())
+
 chat_users = {}
 pinned_message = ""
 ADMIN_PASSWORD = "adarkmin"  
+last_title=""
+last_program=""
 
 from utils.rando import generate_username
+from utils import info_fetcher
+
+import json
+sched = json.load(open('static/json/schedule.json'))
+
+import datetime
+from datetime import timedelta
+np_offset = timedelta(hours=5, minutes=45)
+
+days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
+
+def fetch_program_info():
+    npt = datetime.datetime.now(datetime.UTC) + np_offset
+
+    weekday = npt.weekday()
+    tday = days[weekday]
+    hour = npt.hour
+    
+    day_schedule = sched[tday]
+    day_schedule.sort(key=lambda x: x['time'])
+    if hour<day_schedule[0]['time']:
+        tday = days[(weekday - 1) % 7]
+        day_schedule = sched[tday]
+        day_schedule.sort(key=lambda x: x['time'])
+        cur_show = day_schedule [-1]
+    else:
+        for show in day_schedule:
+            if hour>=show['time']: cur_show=show
+
+    global last_title, last_program
+
+    program = cur_show['program']
+    if not last_title and last_program == program: return
+
+    func = getattr(info_fetcher, "get_"+cur_show['id'])
+    try: title = func()
+    except: title = ""
+
+    if title!=last_title or program!=last_program:
+        last_title=title
+        last_program=program
+        socketio.emit('queue_update', {
+            "program": last_program,
+            "title": last_title
+        }, room='chat_room')
+
+
+fetch_program_info()
+scheduler.add_job(
+    func=fetch_program_info,
+    trigger=IntervalTrigger(minutes=1),
+    id='minute_task',
+    name='Run every minute task',
+    replace_existing=True
+)
 
 @app.route('/')
 def index():
@@ -67,6 +132,12 @@ def handle_connect():
         emit('pinned_message_update', {
             'message': pinned_message
         })
+
+        emit('queue_update', {
+            "program": last_program,
+            "title": last_title 
+        })
+
         
 @socketio.on('disconnect')
 def handle_disconnect():
