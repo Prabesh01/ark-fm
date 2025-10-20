@@ -1,12 +1,12 @@
 {
   "SUN": [
     {
-      "id":"chill",
+      "id":"box_chill",
       "time": 4,
       "program": "Chill Radio",
-      "source": "yt-thebootlegboy2",
-      "image": "",
-      "stream":""
+      "source": "https://boxradio.net/en/radio/1ae42584-729c-4f36-9f8f-f0be92a95bff",
+      "image": "https://icdn2.streamafrica.net/resize?url=https://assets.radioapi.me/radios/01J658WK2GBB41EKHTPNH5BFGS.jpg&width=828&height=828&quality=50",
+      "stream":"https://play.streamafrica.net/chillwave"
     },
     {
       "id":"90s",
@@ -43,12 +43,12 @@
   ],
   "MON": [
     {
-      "id":"chill",
+      "id":"box_chill",
       "time": 4,
       "program": "Chill Radio",
-      "source": "yt-thebootlegboy2",
-      "image": "",
-      "stream":""
+      "source": "https://boxradio.net/en/radio/1ae42584-729c-4f36-9f8f-f0be92a95bff",
+      "image": "https://icdn2.streamafrica.net/resize?url=https://assets.radioapi.me/radios/01J658WK2GBB41EKHTPNH5BFGS.jpg&width=828&height=828&quality=50",
+      "stream":"https://play.streamafrica.net/chillwave"
     },
     {
       "id":"90s",
