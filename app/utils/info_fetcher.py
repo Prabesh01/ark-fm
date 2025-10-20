@@ -34,9 +34,19 @@ def get_lofi_radio():
     r=get_json("https://ec3.yesstreaming.net:2910/api/v2/history/?limit=1&offset=0&server=10")['results'][0]
     return f"{r['title']} by {r['author']}"
     
-def process_1fm():
-    r=get_json("https://www.1.fm/stplaylist/kidsfm")['nowplaying'][0]
+def process_1fm(id):
+    r=get_json("https://www.1.fm/stplaylist/"+id)['nowplaying'][0]
     return f"{r['title']} by {r['artist']}"
 
 def get_1fm_lofi():
-    return process_1fm()
+    return process_1fm('kidsfm')
+
+def get_absolute_90s():
+    return process_1fm('90s')
+
+def process_soma(id):
+    r=get_json(f"https://somafm.com/songs/{id}.json")['songs'][0]
+    return f"{r['title']} by {r['artist']}"
+
+def get_soma_80s():
+    return process_soma('u80s')

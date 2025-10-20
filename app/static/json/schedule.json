@@ -9,11 +9,11 @@
       "stream":"https://play.streamafrica.net/chillwave"
     },
     {
-      "id":"90s",
+      "id":"absolute_90s",
       "time": 7,
       "program": "90's",
-      "source": "",
-      "image": "",
+      "source": "https://www.1.fm/station/90s",
+      "image": "https://www.radio.net/300/1fmabsolute90s.png",
       "stream":"http://strm112.1.fm/90s_mobile_mp3"
     },
     {
@@ -51,11 +51,11 @@
       "stream":"https://play.streamafrica.net/chillwave"
     },
     {
-      "id":"90s",
+      "id":"absolute_90s",
       "time": 7,
       "program": "90's",
-      "source": "",
-      "image": "",
+      "source": "https://www.1.fm/station/90s",
+      "image": "https://www.radio.net/300/1fmabsolute90s.png",
       "stream":"http://strm112.1.fm/90s_mobile_mp3"
     },
     {
@@ -127,11 +127,11 @@
       "stream":"https://stream.chillhop.com/mp3/23347"
     },
     {
-      "id":"80s",
+      "id":"soma_80s",
       "time": 7,
       "program": "80's",
-      "source": "",
-      "image": "",
+      "source": "https://somafm.com/u80s/",
+      "image": "https://somafm.com/img3/u80s-400.png",
       "stream":"https://ice2.somafm.com/u80s-256-mp3"
     },
     {
@@ -169,11 +169,11 @@
       "stream":"https://stream.chillhop.com/mp3/23347"
     },
     {
-      "id":"80s",
+      "id":"soma_80s",
       "time": 7,
       "program": "80's",
-      "source": "",
-      "image": "",
+      "source": "https://somafm.com/u80s/",
+      "image": "https://somafm.com/img3/u80s-400.png",
       "stream":"https://ice2.somafm.com/u80s-256-mp3"
     },
     {
