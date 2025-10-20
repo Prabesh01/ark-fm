@@ -1,6 +1,6 @@
 // Tab functionality
 async function fillSlider() {
-    const response = await fetch('/schedule.json');
+    const response = await fetch('/static/json/schedule.json');
     let data = await response.json();
 
     const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
