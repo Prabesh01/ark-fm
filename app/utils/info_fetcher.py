@@ -5,10 +5,38 @@ def get_json(url):
 
 def get_sbs_chill():
     r=get_json("https://fos.sbs.com.au/web/audio/current-song/sbs-chill?delay=90")
-    print(r)
     return r['songDisplayName']
    
-def get_box_chill():
-    r=get_json("https://prod-api.radioapi.me/metadata/1ae42584-729c-4f36-9f8f-f0be92a95bff")
+def process_box(id):
+    r=get_json("https://prod-api.radioapi.me/metadata/"+id)
     return f"{r['song']} by {r['artist']}"
+
+def get_box_chill():
+    return process_box('1ae42584-729c-4f36-9f8f-f0be92a95bff')
+
+def get_box_lofi():
+    return process_box('70a198a4-c4eb-4f17-82c9-db07cd0361af')
+
+def process_chillhop(id):
+    r=get_json(f"https://stream.chillhop.com/live/{id}")[0]
+    return f"{r['title']} by {r['artists']}"
     
+def get_chillhop_study():
+    return process_chillhop(12363)
+
+def get_chillhop():
+    return process_chillhop(12355)
+
+def get_chillhop_lofi():
+    return process_chillhop(12354)
+
+def get_lofi_radio():
+    r=get_json("https://ec3.yesstreaming.net:2910/api/v2/history/?limit=1&offset=0&server=10")['results'][0]
+    return f"{r['title']} by {r['author']}"
+    
+def process_1fm():
+    r=get_json("https://www.1.fm/stplaylist/kidsfm")['nowplaying'][0]
+    return f"{r['title']} by {r['artist']}"
+
+def get_1fm_lofi():
+    return process_1fm()

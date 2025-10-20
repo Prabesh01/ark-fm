@@ -33,12 +33,12 @@
       "stream":"https://str1.openstream.co/589"
     },
     {
-      "id":"lofi",
+      "id":"chillhop_lofi",
       "time": 23,
       "program": "Lofi",
-      "source": "yt-lofigeek",
-      "image": "",
-      "stream":""
+      "source": "https://app.chillhop.com/",
+      "image": "https://chillhop.com/assets/img/livestreams/chillhopradio.jpg",
+      "stream":"https://stream.chillhop.com/mp3/64118"
     }
   ],
   "MON": [
@@ -75,12 +75,12 @@
       "stream":"https://str1.openstream.co/589"
     },
     {
-      "id":"lofi",
+      "id":"chillhop_lofi",
       "time": 23,
       "program": "Lofi",
-      "source": "yt-lofigeek",
-      "image": "",
-      "stream":""
+      "source": "https://app.chillhop.com/",
+      "image": "https://chillhop.com/assets/img/livestreams/chillhopradio.jpg",
+      "stream":"https://stream.chillhop.com/mp3/64118"
     }
   ],
   "TUE": [
@@ -109,22 +109,22 @@
       "stream":""
     },
     {
-      "id":"lofi",
+      "id":"box_lofi",
       "time": 23,
       "program": "Lofi",
-      "source": "yt-lofigeek",
-      "image": "",
-      "stream":""
+      "source": "https://boxradio.net/en/opendata",
+      "image": "https://icdn2.streamafrica.net/resize?url=https%3A%2F%2Fassets.radioapi.me%2Fradios%2F01J65EZCTC4KAVKFBTKXH8ZRNK.jpg&width=828&height=828&quality=50",
+      "stream":"https://boxradio-edge-00.streamafrica.net/lofi"
     }
   ],
   "WED": [
     {
-      "id":"chill",
+      "id":"chillhop_study",
       "time": 4,
       "program": "Chill Radio",
-      "source": "yt-thebootlegboy2",
-      "image": "",
-      "stream":""
+      "source": "https://app.chillhop.com/",
+      "image": "https://chillhop.com/assets/img/livestreams/chillhopradio.jpg",
+      "stream":"https://stream.chillhop.com/mp3/23347"
     },
     {
       "id":"80s",
@@ -151,22 +151,22 @@
       "stream":"https://ice6.somafm.com/folkfwd-128-mp3"
     },
     {
-      "id":"lofi",
+      "id":"box_lofi",
       "time": 23,
       "program": "Lofi",
-      "source": "yt-lofigeek",
-      "image": "",
-      "stream":""
+      "source": "https://boxradio.net/en/opendata",
+      "image": "https://icdn2.streamafrica.net/resize?url=https%3A%2F%2Fassets.radioapi.me%2Fradios%2F01J65EZCTC4KAVKFBTKXH8ZRNK.jpg&width=828&height=828&quality=50",
+      "stream":"https://boxradio-edge-00.streamafrica.net/lofi"
     }
   ],
   "THU": [
     {
-      "id":"chill",
+      "id":"chillhop_study",
       "time": 4,
       "program": "Chill Radio",
-      "source": "yt-thebootlegboy2",
-      "image": "",
-      "stream":""
+      "source": "https://app.chillhop.com/",
+      "image": "https://chillhop.com/assets/img/livestreams/chillhopradio.jpg",
+      "stream":"https://stream.chillhop.com/mp3/23347"
     },
     {
       "id":"80s",
@@ -193,22 +193,22 @@
       "stream":"https://ice6.somafm.com/folkfwd-128-mp3"
     },
     {
-      "id":"lofi",
+      "id":"1fm_lofi",
       "time": 23,
       "program": "Lofi",
-      "source": "yt-lofigeek",
-      "image": "",
-      "stream":""
+      "source": "https://www.1.fm/station/kidsfm",
+      "image": "https://www.radio.net/300/1fmkidsfm.png",
+      "stream":"https://strm112.1.fm/kidsfm_mobile_mp3?aw_0_req.gdpr=true"
     }
   ],
   "FRI": [
     {
-      "id":"chill",
+      "id":"chillhop",
       "time": 4,
       "program": "Chill Radio",
-      "source": "yt-thebootlegboy2",
-      "image": "",
-      "stream":""
+      "source": "https://app.chillhop.com/",
+      "image": "https://chillhop.com/assets/img/livestreams/chillhopradio.jpg",
+      "stream":"https://stream.chillhop.com/mp3/62379"
     },
     {
       "id": "Friday",
@@ -219,22 +219,22 @@
       "stream":"https://ice2.somafm.com/covers-128-mp3"
     },
     {
-      "id":"lofi",
+      "id":"1fm_lofi",
       "time": 23,
       "program": "Lofi",
-      "source": "yt-lofigeek",
-      "image": "",
-      "stream":""
+      "source": "https://www.1.fm/station/kidsfm",
+      "image": "https://www.radio.net/300/1fmkidsfm.png",
+      "stream":"https://strm112.1.fm/kidsfm_mobile_mp3?aw_0_req.gdpr=true"
     }
   ],
   "SAT": [
     {
-      "id":"chill",
+      "id":"chillhop",
       "time": 4,
       "program": "Chill Radio",
-      "source": "yt-thebootlegboy2",
-      "image": "",
-      "stream":""
+      "source": "https://app.chillhop.com/",
+      "image": "https://chillhop.com/assets/img/livestreams/chillhopradio.jpg",
+      "stream":"https://stream.chillhop.com/mp3/62379"
     },
     {
       "id": "Friday",
@@ -245,12 +245,12 @@
       "stream":"https://ice2.somafm.com/covers-128-mp3"
     },
     {
-      "id":"lofi",
+      "id":"lofi_radio",
       "time": 23,
       "program": "Lofi",
-      "source": "yt-lofigeek",
+      "source": "https://www.247lofiradio.com/",
       "image": "",
-      "stream":""
+      "stream":"https://ec3.yesstreaming.net:3755/stream"
     }
   ]
 }
