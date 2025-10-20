@@ -977,7 +977,7 @@ audio.addEventListener('pause', () => {
             const pinnedMessage = document.getElementById('pinnedMessage');
             const onlineCount = document.getElementById('online-count');
             const username = '{{ username }}';
-            let last_msg="";
+            // let last_msg="";
 
             // Toggle chat box
             chatIcon.addEventListener('click', function() {
@@ -1006,8 +1006,8 @@ audio.addEventListener('pause', () => {
                 const message = messageInput.value.trim();
                 if (message) {
                     socket.emit('send_message', { message: message });
-                    addMessage(username, message, true);
-                    last_msg=message
+                    // addMessage(username, message, true);
+                    // last_msg=message
                     messageInput.value = '';
                 }
             }
@@ -1023,11 +1023,12 @@ audio.addEventListener('pause', () => {
             });
             
             // Add message to chat
-            function addMessage(username, message, isOwn=false) {
+            function addMessage(sender, message, isOwn=false) {
                 const messageDiv = document.createElement('div');
                 messageDiv.className = 'message';
-                
-                if (username==="Admin") {
+                if (sender==username) {isOwn=true;}
+
+                if (sender==="Admin") {
                     messageDiv.classList.add('admin');
                 } 
                 if (isOwn) {
@@ -1035,7 +1036,7 @@ audio.addEventListener('pause', () => {
                 }
                 
                 messageDiv.innerHTML = `
-                    <div class="username">${username}</div>
+                    <div class="username">${sender}</div>
                     <div class="message-content">${message}</div>
                 `;
                 
@@ -1045,7 +1046,7 @@ audio.addEventListener('pause', () => {
 
             const socket = io();
         socket.on('new_message', (data) => {
-            if (data.username==username && data.message==last_msg){return}
+            // if (data.username==username && data.message==last_msg){return}
             addMessage(data.username,data.message);
         });
 
