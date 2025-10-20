@@ -39,9 +39,9 @@ days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
 def fetch_program_info():
     npt = datetime.datetime.now(datetime.UTC) + np_offset
 
-    weekday = 1 # npt.weekday()
+    weekday = npt.weekday()
     tday = days[weekday]
-    hour = 5 # npt.hour
+    hour = npt.hour
     
     day_schedule = sched[tday]
     day_schedule.sort(key=lambda x: x['time'])
