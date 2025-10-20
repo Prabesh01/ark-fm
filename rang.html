@@ -206,7 +206,7 @@ color: #aaa;
             align-items: center;
             padding: 12px 20px;
             box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
-            z-index: 1000;
+            z-index: 999;
         }
 
         .player-left {
@@ -398,6 +398,223 @@ color: #aaa;
     display: none;
   }
 }
+
+        /* Chat widget styles */
+        .chat-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .chat-icon {
+            width: 60px;
+            height: 60px;
+            background-color: #097969;
+            /* background-color: rgba(25, 147, 147, 0.2); */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+        
+        .chat-icon:hover {
+            transform: scale(1.1);
+        }
+        
+        .chat-icon svg {
+            width: 30px;
+            height: 30px;
+            fill: white;
+        }
+        
+        .chat-box {
+            position: absolute;
+            bottom: 70px;
+            right: 0;
+            width: 350px;
+            height: 500px;
+    background: -moz-linear-gradient(-45deg, #183850 0, #183850 25%, #192C46 50%, #22254C 75%, #22254C 100%);
+    background: -webkit-linear-gradient(-45deg, #183850 0, #183850 25%, #192C46 50%, #22254C 75%, #22254C 100%);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+            color: #0AD5C1;
+            border-radius: 12px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .chat-box.active {
+            display: flex;
+        }
+        
+        .chat-header {
+            /* background-color: #ff0000; */
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .chat-title {
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .username {
+            color: grey;
+            font-weight: normal;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .pinned-message {
+            background-color: rgba(255,255,255,0.95);
+            color: black;
+            padding: 10px 15px;
+            margin: 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .pinned-message .expand-icon {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .pinned-message.expanded {
+            max-height: none;
+        }
+        
+        .pinned-message.collapsed {
+            max-height: 40px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .message {
+            padding: 8px 12px;
+            border-radius: 8px;
+            background-color: rgba(25, 147, 147, 0.2);
+            max-width: 90%;
+            align-self: flex-start;
+        }
+        
+        .message.admin {
+            border-left: 3px solid yellow;
+            align-self: flex-start;
+        }
+        
+        .message.own {
+            /* background-color: #e3f2fd; */
+            color: #0EC879;
+            align-self: flex-end;
+        }
+        
+        .username {
+            font-weight: bold;
+            font-size: 12px;
+            margin-bottom: 4px;
+            color: white;
+        }
+        
+        .message.admin .username {
+            color: white;
+        }
+        
+        .message-content {
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .chat-input {
+            display: flex;
+            padding: 10px;
+            /* border-top: 1px solid #e0e0e0; */
+        }
+        
+        .chat-input input {
+            background-color: rgba(25, 147, 147, 0.2);
+            color: #0EC879;
+
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #0EC879;
+            border-radius: 20px;
+            outline: none;
+            font-size: 14px;
+        }
+        
+        .chat-input button {
+            background-color: transparent;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 15px;
+            margin-left: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        /* Responsive styles */
+        @media (max-width: 480px) {
+            .chat-box {
+                width: 300px;
+                height: 400px;
+            }
+            
+            .chat-icon {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .chat-icon svg {
+                width: 24px;
+                height: 24px;
+            }
+        }
+        
+        @media (max-width: 350px) {
+            .chat-box {
+                width: 280px;
+            }
+        }
+
 </style>
 </head>
 <body>
@@ -592,6 +809,39 @@ color: #aaa;
     </main>
   </div>
 -->
+
+    <!-- Chat Widget -->
+    <div class="chat-widget">
+        <div class="chat-icon" id="chatIcon">
+            <svg viewBox="0 0 24 24">
+                <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/>
+            </svg>
+        </div>
+        
+        <div class="chat-box" id="chatBox">
+            <div class="chat-header">
+                <div class="chat-title">Live Chat <span class="username">@yourusername</span></div>
+                <button class="close-btn" id="closeChat"><i class="fa fa-close"></i></button>
+            </div>
+            
+            <div class="pinned-message collapsed" id="pinnedMessage">
+                <div class="expand-icon"><i class="fa fa-angle-down"></i></div>
+                Welcome to our live stream! Please be respectful in the chat and follow our community guidelines. Have fun and enjoy the stream!
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <!-- Messages will be added here by JavaScript -->
+            </div>
+            
+            <div class="chat-input">
+                <input type="text" id="messageInput" placeholder="Send a message...">
+                <button id="sendMessage">Send</button>
+            </div>
+        </div>
+    </div>
+
+
+
     <section class="footer">
 <a target="_blank" href="https://www.facebook.com/medisno/"><i class="fa fa-facebook-f"></i></a>
 <a target="_blank" href="https://www.youtube.com/@medisno"><i class="fa fa-youtube"></i></a>
@@ -713,4 +963,108 @@ audio.addEventListener('pause', () => {
             }
         });        
     </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elements
+            const chatIcon = document.getElementById('chatIcon');
+            const chatBox = document.getElementById('chatBox');
+            const closeChat = document.getElementById('closeChat');
+            const chatMessages = document.getElementById('chatMessages');
+            const messageInput = document.getElementById('messageInput');
+            const sendMessage = document.getElementById('sendMessage');
+            const pinnedMessage = document.getElementById('pinnedMessage');
+            
+            // Sample messages data
+            const sampleMessages = [
+                { username: 'Streamer', content: 'Welcome everyone to my live stream!', isAdmin: true },
+                { username: 'Viewer123', content: 'Great to be here!', isAdmin: false },
+                { username: 'FanGirl', content: 'Love your content!', isAdmin: false },
+                { username: 'Streamer', content: 'Thanks for joining! Remember to like and subscribe.', isAdmin: true },
+                { username: 'ChatUser', content: 'What are we playing today?', isAdmin: false },
+                { username: 'Streamer', content: 'We\'re starting with some Minecraft, then maybe some Valorant later.', isAdmin: true },
+                { username: 'GamerPro', content: 'Can\'t wait for the Valorant gameplay!', isAdmin: false }
+            ];
+            
+            // Toggle chat box
+            chatIcon.addEventListener('click', function() {
+                chatBox.classList.toggle('active');
+            });
+            
+            closeChat.addEventListener('click', function() {
+                chatBox.classList.remove('active');
+            });
+            
+            // Toggle pinned message
+            pinnedMessage.addEventListener('click', function() {
+                if (pinnedMessage.classList.contains('collapsed')) {
+                    pinnedMessage.classList.remove('collapsed');
+                    pinnedMessage.classList.add('expanded');
+                    pinnedMessage.querySelector('.expand-icon').innerHTML = '<i class="fa fa-angle-up"></i>';
+                } else {
+                    pinnedMessage.classList.remove('expanded');
+                    pinnedMessage.classList.add('collapsed');
+                    pinnedMessage.querySelector('.expand-icon').innerHTML = '<i class="fa fa-angle-down"></i>';
+                }
+            });
+            
+            // Send message function
+            function sendMessageHandler() {
+                const message = messageInput.value.trim();
+                if (message) {
+                    addMessage('yourusername', message, false, true);
+                    messageInput.value = '';
+                    
+                    // Auto-reply after a short delay
+                    setTimeout(() => {
+                        const replies = [
+                            'Thanks for your message!',
+                            'Great point!',
+                            'I appreciate your input!',
+                            'That\'s interesting!',
+                            'Thanks for watching!'
+                        ];
+                        const randomReply = replies[Math.floor(Math.random() * replies.length)];
+                        addMessage('Streamer', randomReply, true, false);
+                    }, 1000);
+                }
+            }
+            
+            // Send message on button click
+            sendMessage.addEventListener('click', sendMessageHandler);
+            
+            // Send message on Enter key
+            messageInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessageHandler();
+                }
+            });
+            
+            // Add message to chat
+            function addMessage(username, content, isAdmin, isOwn) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message';
+                
+                if (isAdmin) {
+                    messageDiv.classList.add('admin');
+                } else if (isOwn) {
+                    messageDiv.classList.add('own');
+                }
+                
+                messageDiv.innerHTML = `
+                    <div class="username">${username}</div>
+                    <div class="message-content">${content}</div>
+                `;
+                
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            // Load sample messages
+            sampleMessages.forEach(msg => {
+                addMessage(msg.username, msg.content, msg.isAdmin, false);
+            });
+        });
+    </script>
+
 </html>
