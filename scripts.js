@@ -133,18 +133,23 @@ function highlightCurrentShow() {
         }
         
         // Remove previous highlights
+        slot.querySelector('.divider').style.background="";
+        slot.querySelector('.time small').classList.remove('live-tag');
         slot.classList.remove('current-show');
-        const parent = slot.closest('.day_Sunday, .day_Monday, .day_Tuesday, .day_Wednesday, .day_Thursday, .day_Friday, .day_Saturday');
-        if (parent) parent.classList.remove('current-show');
+        // const parent = slot.closest('.day_Sunday, .day_Monday, .day_Tuesday, .day_Wednesday, .day_Thursday, .day_Friday, .day_Saturday');
+        // if (parent) parent.classList.remove('current-show');
     });
     
     // Highlight current show
     if (currentShow && isToday) {
+        // Remove previous highlights
+        // activePanel.querySelectorAll('.current-show').forEach((e)=>{e.querySelector('.divider').style.background="";e.querySelector('.time small').classList.remove('live-tag');e.classList.remove('current-show')})
+
         currentShow.classList.add('current-show');
         if (currentShowElement) {
             currentShowElement.classList.add('current-show');
         }
-
+        
         // Change divider color and add live tag
         const divider = currentShow.querySelector('.divider');
         if (divider) {
@@ -155,6 +160,9 @@ function highlightCurrentShow() {
         if (timeSmall) {
             timeSmall.classList.add('live-tag');
         }
+            setTimeout(function() {
+                highlightCurrentShow();
+            }, 20000);
 
     }
     
