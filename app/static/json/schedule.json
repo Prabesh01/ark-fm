@@ -4,7 +4,7 @@
       "id":"chill",
       "time": 4,
       "program": "Chill Radio",
-      "source": "thebootlegboy2",
+      "source": "yt-thebootlegboy2",
       "image": "",
       "stream":""
     },
@@ -14,13 +14,13 @@
       "program": "90's",
       "source": "",
       "image": "",
-      "stream":""
+      "stream":"http://strm112.1.fm/90s_mobile_mp3"
     },
     {
       "id":"car",
       "time": 15,
       "program": "Car Music",
-      "source": "",
+      "source": "yt-blackmagicmusic",
       "image": "",
       "stream":""
     },
@@ -30,13 +30,13 @@
       "program": "Soft Music",
       "source": "",
       "image": "",
-      "stream":""
+      "stream":"https://str1.openstream.co/589"
     },
     {
       "id":"lofi",
       "time": 23,
       "program": "Lofi",
-      "source": "lofigeek",
+      "source": "yt-lofigeek",
       "image": "",
       "stream":""
     }
@@ -46,7 +46,7 @@
       "id":"chill",
       "time": 4,
       "program": "Chill Radio",
-      "source": "",
+      "source": "yt-thebootlegboy2",
       "image": "",
       "stream":""
     },
@@ -56,13 +56,13 @@
       "program": "90's",
       "source": "",
       "image": "",
-      "stream":""
+      "stream":"http://strm112.1.fm/90s_mobile_mp3"
     },
     {
       "id":"car",
       "time": 15,
       "program": "Car Music",
-      "source": "",
+      "source": "yt-blackmagicmusic",
       "image": "",
       "stream":""
     },
@@ -72,31 +72,31 @@
       "program": "Soft Music",
       "source": "",
       "image": "",
-      "stream":""
+      "stream":"https://str1.openstream.co/589"
     },
     {
       "id":"lofi",
       "time": 23,
       "program": "Lofi",
-      "source": "",
+      "source": "yt-lofigeek",
       "image": "",
       "stream":""
     }
   ],
   "TUE": [
     {
-      "id":"chill",
+      "id":"sbs_chill",
       "time": 4,
       "program": "Chill Radio",
-      "source": "",
-      "image": "",
-      "stream":""
+      "source": "https://www.sbs.com.au/audio/music/chill",
+      "image": "https://images.sbs.com.au/bd/47/cf44e9ba4acb8a49681c3396d8b6/6.png?imwidth=256",
+      "stream":"https://sbs-hls.streamguys1.com/hls/sbschill/playlist.m3u8"
     },
     {
       "id":"ncs",
       "time": 7,
       "program": "NCS Arcade",
-      "source": "",
+      "source": "yt-NCSArcade",
       "image": "",
       "stream":""
     },
@@ -112,7 +112,7 @@
       "id":"lofi",
       "time": 23,
       "program": "Lofi",
-      "source": "",
+      "source": "yt-lofigeek",
       "image": "",
       "stream":""
     }
@@ -122,7 +122,7 @@
       "id":"chill",
       "time": 4,
       "program": "Chill Radio",
-      "source": "",
+      "source": "yt-thebootlegboy2",
       "image": "",
       "stream":""
     },
@@ -132,7 +132,7 @@
       "program": "80's",
       "source": "",
       "image": "",
-      "stream":""
+      "stream":"https://ice2.somafm.com/u80s-256-mp3"
     },
     {
       "id":"club",
@@ -148,13 +148,13 @@
       "program": "Indie Folk",
       "source": "",
       "image": "",
-      "stream":""
+      "stream":"https://ice6.somafm.com/folkfwd-128-mp3"
     },
     {
       "id":"lofi",
       "time": 23,
       "program": "Lofi",
-      "source": "",
+      "source": "yt-lofigeek",
       "image": "",
       "stream":""
     }
@@ -164,7 +164,7 @@
       "id":"chill",
       "time": 4,
       "program": "Chill Radio",
-      "source": "",
+      "source": "yt-thebootlegboy2",
       "image": "",
       "stream":""
     },
@@ -174,7 +174,7 @@
       "program": "80's",
       "source": "",
       "image": "",
-      "stream":""
+      "stream":"https://ice2.somafm.com/u80s-256-mp3"
     },
     {
       "id":"club",
@@ -190,13 +190,13 @@
       "program": "Indie Folk",
       "source": "",
       "image": "",
-      "stream":""
+      "stream":"https://ice6.somafm.com/folkfwd-128-mp3"
     },
     {
       "id":"lofi",
       "time": 23,
       "program": "Lofi",
-      "source": "",
+      "source": "yt-lofigeek",
       "image": "",
       "stream":""
     }
@@ -206,7 +206,7 @@
       "id":"chill",
       "time": 4,
       "program": "Chill Radio",
-      "source": "",
+      "source": "yt-thebootlegboy2",
       "image": "",
       "stream":""
     },
@@ -216,13 +216,13 @@
       "program": "Hit Cover Songs",
       "source": "",
       "image": "",
-      "stream":""
+      "stream":"https://ice2.somafm.com/covers-128-mp3"
     },
     {
       "id":"lofi",
       "time": 23,
       "program": "Lofi",
-      "source": "",
+      "source": "yt-lofigeek",
       "image": "",
       "stream":""
     }
@@ -232,7 +232,7 @@
       "id":"chill",
       "time": 4,
       "program": "Chill Radio",
-      "source": "",
+      "source": "yt-thebootlegboy2",
       "image": "",
       "stream":""
     },
@@ -242,13 +242,13 @@
       "program": "Hit Cover Songs",
       "source": "",
       "image": "",
-      "stream":""
+      "stream":"https://ice2.somafm.com/covers-128-mp3"
     },
     {
       "id":"lofi",
       "time": 23,
       "program": "Lofi",
-      "source": "",
+      "source": "yt-lofigeek",
       "image": "",
       "stream":""
     }

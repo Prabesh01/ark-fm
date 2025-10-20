@@ -39,9 +39,9 @@ days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
 def fetch_program_info():
     npt = datetime.datetime.now(datetime.UTC) + np_offset
 
-    weekday = npt.weekday()
+    weekday = 1 # npt.weekday()
     tday = days[weekday]
-    hour = npt.hour
+    hour = 5 # npt.hour
     
     day_schedule = sched[tday]
     day_schedule.sort(key=lambda x: x['time'])
@@ -59,8 +59,9 @@ def fetch_program_info():
     program = cur_show['program']
     if not last_title and last_program == program: return
 
-    func = getattr(info_fetcher, "get_"+cur_show['id'])
-    try: title = func()
+    try:
+        func = getattr(info_fetcher, "get_"+cur_show['id'])
+        title = func()
     except: title = ""
 
     if title!=last_title or program!=last_program:
@@ -75,7 +76,7 @@ def fetch_program_info():
 fetch_program_info()
 scheduler.add_job(
     func=fetch_program_info,
-    trigger=IntervalTrigger(minutes=1),
+    trigger=IntervalTrigger(seconds=20),
     id='minute_task',
     name='Run every minute task',
     replace_existing=True
