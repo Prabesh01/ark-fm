@@ -167,7 +167,11 @@ function highlightCurrentShow() {
         // const parent = slot.closest('.day_Sunday, .day_Monday, .day_Tuesday, .day_Wednesday, .day_Thursday, .day_Friday, .day_Saturday');
         // if (parent) parent.classList.remove('current-show');
     });
-    if (currentShow){
+    // Highlight current show
+    if (currentShow && isToday) {
+        // Remove previous highlights
+        // activePanel.querySelectorAll('.current-show').forEach((e)=>{e.querySelector('.divider').style.background="";e.querySelector('.time small').classList.remove('live-tag');e.classList.remove('current-show')})
+
         srcrl.setAttribute('data-url', currentShow.getAttribute('data-src'));
 
         imgrl = currentShow.getAttribute('data-img');
@@ -177,11 +181,7 @@ function highlightCurrentShow() {
             thumb.src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z'/%3E%3C/svg%3E";
         }
         program.innerHTML=currentShow.querySelector('.title').innerHTML;
-    }
-    // Highlight current show
-    if (currentShow && isToday) {
-        // Remove previous highlights
-        // activePanel.querySelectorAll('.current-show').forEach((e)=>{e.querySelector('.divider').style.background="";e.querySelector('.time small').classList.remove('live-tag');e.classList.remove('current-show')})
+
 
         currentShow.classList.add('current-show');
         if (currentShowElement) {
