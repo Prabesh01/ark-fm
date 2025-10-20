@@ -53,7 +53,7 @@ def fetch_program_info():
     else:
         for show in day_schedule:
             if hour>=show['time']: cur_show=show
-    print(tday)
+
     global last_title, last_program
 
     program = cur_show['program']

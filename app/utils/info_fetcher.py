@@ -50,3 +50,7 @@ def process_soma(id):
 
 def get_soma_80s():
     return process_soma('u80s')
+
+def get_soft():
+    r=get_json("https://onlineradiobox.com/json/fr/abclounge/playlist/0")['playlist'][0]
+    return r['name']
