@@ -1,8 +1,32 @@
 // Tab functionality
+async function fillSlider() {
+    const response = await fetch('/schedule.json');
+    let data = await response.json();
+
+    const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+
+    days.forEach(day => {
+        var panel = document.getElementById(`${day}-panel`);
+        var panelList = document.createElement('div');
+        panelList.classList.add('list')
+        data[day].forEach((prog) => {
+            panelList.innerHTML+= `\n<div class="day_${day}"><div class="show-slot" data-img="${prog.image}" data-src="${prog.source}"><div class="time">${prog.time}:00&nbsp;<small>NPT</small></div><div class="divider"></div><p class="title">${prog.program}</p></div>\n`;
+        });
+        panel.appendChild(panelList);
+    });
+}
+
 document.addEventListener("DOMContentLoaded", function() {
     // Reorder tabs and update dates based on today
     reorderAndUpdateSchedule();
     
+    fillSlider().then(() => {
+        // Initialize schedule functionality if element exists
+        if (document.querySelector('.schedule-mini')) {
+            initScheduleMini();
+        }
+    });
+
     // Tab click tracking
     document.querySelectorAll('[role="tab"]').forEach(function(tab) {
         tab.addEventListener("click", function(event) {
@@ -21,9 +45,9 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     // Initialize schedule functionality if element exists
-    if (document.querySelector('.schedule-mini')) {
-        initScheduleMini();
-    }
+    // if (document.querySelector('.schedule-mini')) {
+    //    initScheduleMini();
+    // }
 });
 
 function reorderAndUpdateSchedule() {
@@ -82,6 +106,10 @@ function reorderAndUpdateSchedule() {
         if (dateShortSpan) dateShortSpan.textContent = `${day}/${String(year).slice(-2)}`;
     });
 }
+const program = document.getElementById('program');
+const title = document.getElementById('title');
+const srcrl = document.getElementById('source-url');
+const thumb = document.getElementById('pragram-img');
 
 function highlightCurrentShow() {
     const now = new Date();
@@ -139,7 +167,17 @@ function highlightCurrentShow() {
         // const parent = slot.closest('.day_Sunday, .day_Monday, .day_Tuesday, .day_Wednesday, .day_Thursday, .day_Friday, .day_Saturday');
         // if (parent) parent.classList.remove('current-show');
     });
-    
+    if (currentShow){
+        srcrl.setAttribute('data-url', currentShow.getAttribute('data-src'));
+
+        imgrl = currentShow.getAttribute('data-img');
+        if (imgrl.trim().length != 0) {
+            thumb.src=imgrl;
+        } else {
+            thumb.src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z'/%3E%3C/svg%3E";
+        }
+        program.innerHTML=currentShow.querySelector('.title').innerHTML;
+    }
     // Highlight current show
     if (currentShow && isToday) {
         // Remove previous highlights
