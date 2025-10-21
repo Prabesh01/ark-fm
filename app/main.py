@@ -18,7 +18,7 @@ app.config['SESSION_TYPE'] = 'filesystem'
 
 from flask_session import Session
 Session(app)
-socketio = SocketIO(app, cors_allowed_origins="*", manage_session=False)
+socketio = SocketIO(app, cors_allowed_origins="*", manage_session=False, async_mode='eventlet')
 
 scheduler = BackgroundScheduler()
 scheduler.start()
