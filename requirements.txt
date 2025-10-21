@@ -2,4 +2,3 @@ Flask-SocketIO
 flask_session
 APScheduler
 gunicorn
-flask_session
