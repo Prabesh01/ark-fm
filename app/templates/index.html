@@ -994,6 +994,7 @@ sourceBtn.addEventListener('click', function(event) {
 
       document.addEventListener('keydown', function(event) {
         if (event.code === 'Space') {
+          if (document.activeElement.id=="messageInput"){return;}
           event.preventDefault(); // prevent scrolling
           if (audio.paused) {
             audio.play();
@@ -1063,6 +1064,7 @@ audio.addEventListener('pause', () => {
             // Toggle chat box
             chatIcon.addEventListener('click', function() {
                 chatBox.classList.toggle('active');
+                messageInput.focus();
             });
             
             closeChat.addEventListener('click', function() {
