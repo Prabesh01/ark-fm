@@ -3,7 +3,7 @@ from flask_socketio import SocketIO, emit, join_room
 import random
 import string
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -39,7 +39,7 @@ np_offset = timedelta(hours=5, minutes=45)
 days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
 
 def fetch_program_info():
-    npt = datetime.datetime.now(datetime.UTC) + np_offset
+    npt = datetime.datetime.now(timezone.utc) + np_offset
 
     weekday = npt.weekday()
     tday = days[weekday]
