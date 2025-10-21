@@ -5,6 +5,7 @@ import string
 import secrets
 from datetime import datetime
 import os
+base_dir = os.path.dirname(os.path.abspath(__file__))
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -29,7 +30,7 @@ from utils.rando import generate_username
 from utils import info_fetcher
 
 import json
-sched = json.load(open('static/json/schedule.json'))
+sched = json.load(open(base_dir+'/static/json/schedule.json'))
 
 import datetime
 from datetime import timedelta
