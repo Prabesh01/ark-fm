@@ -128,13 +128,13 @@ Design idea taken from:
 
     /* Use the provided combined image and show left/right halves */
     .card.left{
-      background-image: url('cover2.jpg');
+      background-image: url('/static/img/cover2.jpg');
       background-size:auto;
       background-position:left center;
     }
 
     .card.right{
-      background-image: url('hp.jpg');
+      background-image: url('/static/img/hp.jpg');
       background-size: cover;
       background-position:right center;
     }
@@ -697,7 +697,7 @@ color: #aaa;
         </nav>
 <!--
     <section>
-<img src="cover3.jpg" style="height:auto;width:100%">
+<img src="/static/img/cover3.jpg" style="height:auto;width:100%">
     </section>
 -->
 <section style="background:white;">
@@ -883,7 +883,7 @@ color: #aaa;
     </main>
   </div>
 -->
-<div id="connection-status">Connection Lost. Please restart page</div>
+<div id="connection-status">Connecting...</div>
     <!-- Chat Widget -->
     <div class="chat-widget">
         <div class="chat-icon" id="chatIcon">
@@ -1141,6 +1141,7 @@ socket.on('connect', () => {
 });
 socket.on('disconnect', (reason) => {
     statusEl.style.opacity = '1';
+    statusEl.innerText="Connection Lost. Please restart page";
         messageInput.disabled = true;
         sendMessage.disabled = true;
         messageInput.placeholder = 'Disconnected - Please restart the website!';
