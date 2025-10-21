@@ -23,6 +23,7 @@ pinned_message = ""
 ADMIN_PASSWORD = "adarkmin"  
 last_title=""
 last_program=""
+last_source=""
 
 from utils.rando import generate_username
 from utils import info_fetcher
@@ -54,14 +55,16 @@ def fetch_program_info():
         for show in day_schedule:
             if hour>=show['time']: cur_show=show
 
-    global last_title, last_program
+    global last_title, last_program, last_source
 
+    last_source = cur_show['source']
     program = cur_show['program']
     if not last_title and last_program == program: return
 
     try:
         func = getattr(info_fetcher, "get_"+cur_show['id'])
-        title = func()
+        try: title = func()
+        except: title= "  "
     except: title = ""
 
     if title!=last_title or program!=last_program:
@@ -137,7 +140,8 @@ def handle_connect():
 
         emit('queue_update', {
             "program": last_program,
-            "title": last_title 
+            "title": last_title,
+            "source": last_source
         })
 
         
