@@ -54,3 +54,6 @@ def get_soma_80s():
 def get_soft():
     r=get_json("https://onlineradiobox.com/json/fr/abclounge/playlist/0")['playlist'][0]
     return r['name']
+
+def get_club():
+    return requests.get("https://www.54house.fm/playlists/now_club.txt").text

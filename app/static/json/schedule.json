@@ -138,9 +138,9 @@
       "id":"club",
       "time": 15,
       "program": "Club Music",
-      "source": "",
-      "image": "",
-      "stream":""
+      "source": "https://www.54house.fm/",
+      "image": "https://www.54house.fm/typo3temp/assets/_processed_/8/f/csm_heartfeldt-radio-artwork_02_5f1ceac331.jpg",
+      "stream":"https://54house.fm:9013/stream"
     },
     {
       "id":"indie",
@@ -180,9 +180,9 @@
       "id":"club",
       "time": 15,
       "program": "Club Music",
-      "source": "",
-      "image": "",
-      "stream":""
+      "source": "https://www.54house.fm/",
+      "image": "https://www.54house.fm/typo3temp/assets/_processed_/8/f/csm_heartfeldt-radio-artwork_02_5f1ceac331.jpg",
+      "stream":"https://54house.fm:9013/stream"
     },
     {
       "id":"indie",
