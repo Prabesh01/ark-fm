@@ -161,18 +161,19 @@ function highlightCurrentShow() {
                 currentShowElement = slot.closest('.day_Sunday, .day_Monday, .day_Tuesday, .day_Wednesday, .day_Thursday, .day_Friday, .day_Saturday');
             }
         }
-        
+        if (!isToday){
         // Remove previous highlights
         slot.querySelector('.divider').style.background="";
         slot.querySelector('.time small').classList.remove('live-tag');
         slot.classList.remove('current-show');
         // const parent = slot.closest('.day_Sunday, .day_Monday, .day_Tuesday, .day_Wednesday, .day_Thursday, .day_Friday, .day_Saturday');
         // if (parent) parent.classList.remove('current-show');
+        }
     });
     // Highlight current show
-    if (currentShow && isToday) {
+    if (currentShow && isToday && !currentShow.classList.contains('current-show')) {
         // Remove previous highlights
-        // activePanel.querySelectorAll('.current-show').forEach((e)=>{e.querySelector('.divider').style.background="";e.querySelector('.time small').classList.remove('live-tag');e.classList.remove('current-show')})
+        activePanel.querySelectorAll('.current-show').forEach((e)=>{e.querySelector('.divider').style.background="";e.querySelector('.time small').classList.remove('live-tag');e.classList.remove('current-show')})
 
         srcrl.setAttribute('data-url', currentShow.getAttribute('data-src'));
 
