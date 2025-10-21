@@ -73,3 +73,13 @@ async def process_gplayer(id):
 
 def get_radiox_rock():
     return asyncio.run(process_gplayer(346))
+
+def process_soma(id):
+    r=get_json(f"https://somafm.com/songs/{id}.json")['songs'][0]
+    return f"{r['title']} by {r['artist']}"
+
+def get_indie_folk():
+    return process_soma('folkfwd')
+
+def get_covers():
+    return process_soma('covers')

@@ -152,11 +152,11 @@
       "stream":"https://54house.fm:9013/stream"
     },
     {
-      "id":"indie",
+      "id":"indie_folk",
       "time": 18,
       "program": "Indie Folk",
-      "source": "",
-      "image": "",
+      "source": "https://somafm.com/folkfwd/index.html",
+      "image": "https://somafm.com/img3/folkfwd-400.jpg",
       "stream":"https://ice6.somafm.com/folkfwd-128-mp3"
     },
     {
@@ -194,11 +194,11 @@
       "stream":"https://54house.fm:9013/stream"
     },
     {
-      "id":"indie",
+      "id":"indie_folk",
       "time": 18,
       "program": "Indie Folk",
-      "source": "",
-      "image": "",
+      "source": "https://somafm.com/folkfwd/index.html",
+      "image": "https://somafm.com/img3/folkfwd-400.jpg",
       "stream":"https://ice6.somafm.com/folkfwd-128-mp3"
     },
     {
@@ -220,11 +220,11 @@
       "stream":"https://stream.chillhop.com/mp3/62379"
     },
     {
-      "id": "Friday",
+      "id": "covers",
       "time": 7,
       "program": "Hit Cover Songs",
-      "source": "",
-      "image": "",
+      "source": "https://somafm.com/covers/",
+      "image": "https://somafm.com/img3/covers-400.png",
       "stream":"https://ice2.somafm.com/covers-128-mp3"
     },
     {
@@ -246,11 +246,11 @@
       "stream":"https://stream.chillhop.com/mp3/62379"
     },
     {
-      "id": "Friday",
+      "id": "covers",
       "time": 7,
       "program": "Hit Cover Songs",
-      "source": "",
-      "image": "",
+      "source": "https://somafm.com/covers/",
+      "image": "https://somafm.com/img3/covers-400.png",
       "stream":"https://ice2.somafm.com/covers-128-mp3"
     },
     {
