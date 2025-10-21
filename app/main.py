@@ -10,6 +10,7 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 import atexit
+import requests
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secrets.token_hex(16)
@@ -37,6 +38,10 @@ from datetime import timedelta
 np_offset = timedelta(hours=5, minutes=45)
 
 days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
+
+def update_icecast_metadata(prog, title):
+    url="http://link.zeno.fm:80/admin/metadata?mount=/bfeoaqiomuquv&mode=updinfo&song="
+    requests.get(f"{url}{title} [{prog}]", auth=("source", "6GeTEy67"))
 
 def fetch_program_info():
     npt = datetime.datetime.now(timezone.utc) + np_offset
@@ -71,6 +76,9 @@ def fetch_program_info():
     if title!=last_title or program!=last_program:
         last_title=title
         last_program=program
+
+        update_icecast_metadata(program,title)
+
         socketio.emit('queue_update', {
             "program": last_program,
             "title": last_title,
