@@ -911,7 +911,7 @@ color: #aaa;
         <div class="connection-overlay" id="connectionOverlay">
             <div class="connection-message">
                 <div class="spinner"></div>
-                <div class="message-text">Disconnected!</div>
+                <div class="message-text">Connecting..</div>
             </div>
         </div>
    
@@ -1125,14 +1125,11 @@ audio.addEventListener('pause', () => {
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             }
 
-            const socket = io();
+            const socket = io({reconnection: true,reconnectionAttempts: Infinity,reconnectionDelay: 1000,reconnectionDelayMax: 5000,timeout: 20000});
 
 const statusEl = document.getElementById('connection-status');
 const connectionOverlay = document.getElementById('connectionOverlay');
-var connected_on_start=false;
 socket.on('connect', () => {
-    if(connected_on_start){return;}
-    connected_on_start=true;
     statusEl.style.opacity = '0';
     messageInput.disabled = false;
     sendMessage.disabled = false;
@@ -1141,12 +1138,12 @@ socket.on('connect', () => {
 });
 socket.on('disconnect', (reason) => {
     statusEl.style.opacity = '1';
-    statusEl.innerText="Connection Lost. Please restart page";
+    statusEl.innerText="Connection Lost. Trying to connect..";
         messageInput.disabled = true;
         sendMessage.disabled = true;
-        messageInput.placeholder = 'Disconnected - Please restart the website!';
+        messageInput.placeholder = 'Disconnected!';
     connectionOverlay.classList.add('visible');
-
+    document.getElementById('title').innerText="";
 });
 
         socket.on('new_message', (data) => {

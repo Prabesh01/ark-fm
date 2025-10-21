@@ -14,7 +14,11 @@ import requests
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secrets.token_hex(16)
-socketio = SocketIO(app, cors_allowed_origins="*")
+app.config['SESSION_TYPE'] = 'filesystem'
+
+from flask_session import Session
+Session(app)
+socketio = SocketIO(app, cors_allowed_origins="*", manage_session=False)
 
 scheduler = BackgroundScheduler()
 scheduler.start()

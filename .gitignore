@@ -1,2 +1,4 @@
 __pycache__/
 radio.log
+flask_session/
+ *.pyc
