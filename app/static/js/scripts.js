@@ -10,7 +10,9 @@ async function fillSlider() {
         var panelList = document.createElement('div');
         panelList.classList.add('list')
         data[day].forEach((prog) => {
+            if(!prog.hide){
             panelList.innerHTML+= `\n<div class="day_${day}"><div class="show-slot" data-img="${prog.image}" data-src="${prog.source}"><div class="time">${prog.time}:00&nbsp;<small>NPT</small></div><div class="divider"></div><p class="title">${prog.program}</p></div>\n`;
+            }
         });
         panel.appendChild(panelList);
     });
