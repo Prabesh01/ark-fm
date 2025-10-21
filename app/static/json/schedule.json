@@ -93,12 +93,12 @@
       "stream":"https://sbs-hls.streamguys1.com/hls/sbschill/playlist.m3u8"
     },
     {
-      "id":"ncs",
+      "id":"hiphop",
       "time": 7,
-      "program": "NCS Arcade",
-      "source": "yt-NCSArcade",
-      "image": "",
-      "stream":""
+      "program": "HipHop",
+      "source": "https://boxradio.net/en/radio/cf8999a0-b919-440c-95df-bab46db6b19c",
+      "image": "https://cdn-profiles.tunein.com/s250034/images/logog.jpg",
+      "stream":"https://boxradio-edge-01.streamafrica.net/radio6"
     },
     {
       "id":"rock",

@@ -17,6 +17,9 @@ def get_box_chill():
 def get_box_lofi():
     return process_box('70a198a4-c4eb-4f17-82c9-db07cd0361af')
 
+def get_hiphop():
+    return process_box('cf8999a0-b919-440c-95df-bab46db6b19c')
+
 def process_chillhop(id):
     r=get_json(f"https://stream.chillhop.com/live/{id}")[0]
     return f"{r['title']} by {r['artists']}"
