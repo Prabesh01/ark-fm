@@ -110,7 +110,7 @@ function reorderAndUpdateSchedule() {
 }
 const program = document.getElementById('program');
 const title = document.getElementById('title');
-const srcrl = document.getElementById('source-url');
+const srcrl = document.getElementById('sourceBtn');
 const thumb = document.getElementById('pragram-img');
 
 function highlightCurrentShow() {

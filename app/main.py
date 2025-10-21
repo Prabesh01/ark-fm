@@ -69,7 +69,8 @@ def fetch_program_info():
         last_program=program
         socketio.emit('queue_update', {
             "program": last_program,
-            "title": last_title
+            "title": last_title,
+            "source": cur_show['source']
         }, room='chat_room')
 
 

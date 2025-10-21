@@ -951,12 +951,12 @@ color: #aaa;
                 <button class="mute-btn" id="muteBtn"></button>
                 <input type="range" min="0" max="100" value="80" class="volume-slider" id="volumeSlider">
             </div>
-           <button title="Stream Source" id="source-url" data-url="" class="source-btn" id="sourceBtn"><i class="fa fa-info-circle"></i></button>
+           <button title="Stream Source" data-url="" class="source-btn" id="sourceBtn"><i class="fa fa-info-circle"></i></button>
         </div>
     </div>
 
 <script>
-const sourceBtn = document.getElementById('source-url');
+const sourceBtn = document.getElementById('sourceBtn');
 sourceBtn.addEventListener('click', function(event) {
     srcurl=sourceBtn.getAttribute('data-url');
     if (srcurl.trim().length!=0){
@@ -1173,6 +1173,7 @@ const title = document.getElementById('title');
         socket.on('queue_update', (data) => {
             program.innerText=data.program;
             title.innerText=data.title;
+            document.getElementById('sourceBtn').setAttribute('data-url', data.source);
         });
              
         });
