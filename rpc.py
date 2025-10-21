@@ -56,10 +56,10 @@ class DiscordNowPlaying:
                 artist = artist_part.strip()
                 program = program_part.rstrip("]").strip()
         else:
-            song_name,program = song_title.split(" [", 1)
-            song_name = song_name.strip()
-            program = program.rstrip("]").strip()
-            artist = "ark.cote.ws"
+            program, _ = song_title.split("]", 1)
+            song_name = "N/A"
+            program = program.strip().strip("[")
+            artist = "N/A"
 
         return song_name, artist, program
     
@@ -67,16 +67,14 @@ class DiscordNowPlaying:
         """Update Discord status with current song"""
         if not self.connected:
             return False
-            
+
+        if not song_title.strip(): return True            
         if song_title == self.current_song:
             return True
-        
         self.current_song = song_title
-        if not song_title.strip(): return True
-        
+
         try:
             song_name, artist, program = self.parse_song_info(song_title)
-
             self.rpc.update(
                 details=f"🎵 {song_name}",
                 state=f"{artist}",
