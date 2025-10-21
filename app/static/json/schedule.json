@@ -101,12 +101,21 @@
       "stream":"https://boxradio-edge-01.streamafrica.net/radio6"
     },
     {
-      "id":"rock",
+      "id":"radiox_rock",
       "time": 18,
       "program": "Rock Music",
-      "source": "",
-      "image": "",
-      "stream":""
+      "source": "https://www.globalplayer.com/live/radioxclassicrock/uk/",
+      "image": "https://nz.radio.net/300/1fmclassicrock.png",
+      "stream":"https://media-ssl.musicradio.com/RadioXClassicRock"
+    },
+    {
+      "id":"rock_1fm",
+      "time": 20,
+      "program": "Rock Music",
+      "source": "https://www.1.fm/station/crock",
+      "image": "https://nz.radio.net/300/1fmclassicrock.png",
+      "stream":"https://strm112.1.fm/crock_mobile_mp3",
+      "hide": true
     },
     {
       "id":"box_lofi",
@@ -193,7 +202,7 @@
       "stream":"https://ice6.somafm.com/folkfwd-128-mp3"
     },
     {
-      "id":"1fm_lofi",
+      "id":"lofi_1fm",
       "time": 23,
       "program": "Lofi",
       "source": "https://www.1.fm/station/kidsfm",
@@ -219,7 +228,7 @@
       "stream":"https://ice2.somafm.com/covers-128-mp3"
     },
     {
-      "id":"1fm_lofi",
+      "id":"lofi_1fm",
       "time": 23,
       "program": "Lofi",
       "source": "https://www.1.fm/station/kidsfm",

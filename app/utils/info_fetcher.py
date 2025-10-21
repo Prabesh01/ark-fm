@@ -1,4 +1,5 @@
 import requests
+import asyncio, websockets, json
 
 def get_json(url):
     return requests.get(url).json()
@@ -41,11 +42,14 @@ def process_1fm(id):
     r=get_json("https://www.1.fm/stplaylist/"+id)['nowplaying'][0]
     return f"{r['title']} by {r['artist']}"
 
-def get_1fm_lofi():
+def get_lofi_1fm():
     return process_1fm('kidsfm')
 
 def get_absolute_90s():
     return process_1fm('90s')
+
+def get_rock_1fm():
+    return process_1fm('crock')
 
 def process_soma(id):
     r=get_json(f"https://somafm.com/songs/{id}.json")['songs'][0]
@@ -60,3 +64,12 @@ def get_soft():
 
 def get_club():
     return requests.get("https://www.54house.fm/playlists/now_club.txt").text
+
+async def process_gplayer(id):
+    async with websockets.connect("wss://metadata.musicradio.com/v2/now-playing") as ws:
+        await ws.send(json.dumps({"actions":[{"type":"subscribe","service":str(id)}]}))
+        data = json.loads(await ws.recv())['now_playing']
+        return f"{data['title']} by {data['artist']}"
+
+def get_radiox_rock():
+    return asyncio.run(process_gplayer(346))
