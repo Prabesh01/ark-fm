@@ -65,13 +65,14 @@ def convert_to_plain_lrc(lrc):
 
 def lyrics_search(song,artists):
     global last_lyrics
-    r=requests.get(f"https://lrc.cote.ws/ark/api/get?track_name={song}&artist_name={artists}").json()
-
-    if not 'syncedLyrics' in r:
-        last_lyrics=""
+    r=requests.get(f"https://lrclib.net/api/get?track_name={song}&artist_name={artists}",headers={"User-Agent": "ARK FM (https://ark.cote.ws/)"}).json()
+    if 'plainLyrics' in r:
+        last_lyrics=r['plainLyrics']
+    elif 'syncedLyrics' in r:
+        last_lyrics = convert_to_plain_lrc(r['syncedLyrics'])
+    else:
         socketio.emit('new_message', {"username":"lyrics_bot", "message":"Couldnt find lyrics" } , room='chat_room')
         return
-    last_lyrics = convert_to_plain_lrc(r['syncedLyrics'])
     socketio.emit('new_message', {"username":"lyrics_bot", "message":last_lyrics } , room='chat_room')
 
 def fetch_program_info():
