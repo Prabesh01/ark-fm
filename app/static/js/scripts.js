@@ -185,6 +185,26 @@ function highlightCurrentShow() {
         }
         program.innerHTML=currentShow.querySelector('.title').innerHTML;
 
+if ('mediaSession' in navigator) {
+ if (navigator.mediaSession.metadata) {
+
+  const existingMetadata = navigator.mediaSession.metadata;
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: existingMetadata.title,
+    artist: existingMetadata.artist,
+    album: program.innerHTML,
+    artwork: [{ src: imgrl, sizes: '512x512', type: 'image/jpeg' }]
+  });
+
+ }else{
+  navigator.mediaSession.metadata = new MediaMetadata({
+    album: program.innerHTML,
+    artwork: [
+      { src: imgrl, sizes: '512x512', type: 'image/jpeg' }
+    ]
+  });
+ }
+}
 
         currentShow.classList.add('current-show');
         if (currentShowElement) {

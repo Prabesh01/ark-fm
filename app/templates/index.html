@@ -1197,6 +1197,34 @@ const title = document.getElementById('title');
             program.innerText=data.program;
             title.innerText=data.title;
             document.getElementById('sourceBtn').setAttribute('data-url', data.source);
+
+var songname='';
+var artistname='';
+if (data.title.includes(' by ')){
+var songarsp = data.title.split('by');
+songname=songarsp[0];
+artistname=songarsp[1];
+}else{ songname= data.title}
+
+if ('mediaSession' in navigator) {
+ if (navigator.mediaSession.metadata) {
+
+  const existingMetadata = navigator.mediaSession.metadata;
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: songname,
+    artist: artistname,
+    album: existingMetadata.album,
+    artwork: existingMetadata.artwork
+  });
+
+ }else{
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: songname,
+    artist: artistname,
+  });
+  }
+}
+
         });
              
         });
