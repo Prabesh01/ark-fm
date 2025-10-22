@@ -1148,7 +1148,10 @@ messageDiv.appendChild(usernameDiv);
 messageDiv.appendChild(contentDiv);
                 
                 chatMessages.appendChild(messageDiv);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
+                // chatMessages.scrollTop = chatMessages.scrollHeight;
+
+messageDiv.scrollIntoView({behavior: 'smooth', block:'start'});
+
             }
 
             const socket = io({reconnection: true,reconnectionAttempts: Infinity,reconnectionDelay: 1000,reconnectionDelayMax: 5000,timeout: 20000});
