@@ -580,7 +580,24 @@ color: #aaa;
             outline: none;
             font-size: 14px;
         }
-        
+
+.chat-input textarea {
+            background-color: rgba(25, 147, 147, 0.2);
+            color: #0EC879;
+
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #0EC879;
+            border-radius: 20px;
+            outline: none;
+            font-size: 14px;
+
+    resize: none;
+    min-height: 40px;
+    max-height: 120px;
+    font-family: inherit;
+}        
+
         .chat-input button {
             background-color: transparent;
             color: white;
@@ -916,7 +933,7 @@ color: #aaa;
         </div>
    
             <div class="chat-input">
-                <input type="text" id="messageInput" placeholder="Connecting...">
+                <textarea type="text" id="messageInput" placeholder="Connecting..." disabled rows="1"></textarea>
                 <button id="sendMessage" disabled>SEND</button>
             </div>
         </div>
@@ -1059,7 +1076,6 @@ audio.addEventListener('pause', () => {
             const pinnedMessage = document.getElementById('pinnedMessage');
             const onlineCount = document.getElementById('online-count');
             const username = '{{ username }}';
-            // let last_msg="";
 
             // Toggle chat box
             chatIcon.addEventListener('click', function() {
@@ -1089,8 +1105,6 @@ audio.addEventListener('pause', () => {
                 const message = messageInput.value.trim();
                 if (message) {
                     socket.emit('send_message', { message: message });
-                    // addMessage(username, message, true);
-                    // last_msg=message
                     messageInput.value = '';
                 }
             }
@@ -1101,6 +1115,10 @@ audio.addEventListener('pause', () => {
             // Send message on Enter key
             messageInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
+                    if (e.shiftKey) {
+                        return;
+                    }
+                    e.preventDefault();
                     sendMessageHandler();
                 }
             });
@@ -1118,10 +1136,16 @@ audio.addEventListener('pause', () => {
                     messageDiv.classList.add('own');
                 }
                 
-                messageDiv.innerHTML = `
-                    <div class="username">${sender}</div>
-                    <div class="message-content">${message}</div>
-                `;
+const usernameDiv = document.createElement('div');
+usernameDiv.className = 'username';
+usernameDiv.textContent = sender;
+
+const contentDiv = document.createElement('div');
+contentDiv.className = 'message-content';
+contentDiv.innerText = message;
+
+messageDiv.appendChild(usernameDiv);
+messageDiv.appendChild(contentDiv);
                 
                 chatMessages.appendChild(messageDiv);
                 chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -1149,7 +1173,6 @@ socket.on('disconnect', (reason) => {
 });
 
         socket.on('new_message', (data) => {
-            // if (data.username==username && data.message==last_msg){return}
             addMessage(data.username,data.message);
         });
 
