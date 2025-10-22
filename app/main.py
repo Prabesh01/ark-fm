@@ -24,12 +24,16 @@ scheduler = BackgroundScheduler()
 scheduler.start()
 atexit.register(lambda: scheduler.shutdown())
 
+import eventlet
+eventlet.monkey_patch()
+
 chat_users = {}
 pinned_message = ""
 ADMIN_PASSWORD = "adarkmin"  
 last_title=""
 last_program=""
 last_source=""
+last_lyrics=""
 
 from utils.rando import generate_username
 from utils import info_fetcher
@@ -46,6 +50,29 @@ days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
 def update_icecast_metadata(prog, title):
     url="http://link.zeno.fm:80/admin/metadata?mount=/bfeoaqiomuquv&mode=updinfo&song="
     requests.get(f"{url}{title} [{prog}]", auth=("source", "6GeTEy67"))
+
+def convert_to_plain_lrc(lrc):
+    plain_lyrics = ""
+    try:
+        lines = lrc.split("\n")
+        for line in lines:
+            if not line: continue
+            time, words = line.split("]", 1)
+            plain_lyrics += f"{words}\n"
+        return plain_lyrics
+    except:
+        return plain_lyrics
+
+def lyrics_search(song,artists):
+    global last_lyrics
+    r=requests.get(f"https://lrc.cote.ws/ark/api/get?track_name={song}&artist_name={artists}").json()
+
+    if not 'syncedLyrics' in r:
+        last_lyrics=""
+        socketio.emit('new_message', {"username":"lyrics_bot", "message":"Couldnt find lyrics" } , room='chat_room')
+        return
+    last_lyrics = convert_to_plain_lrc(r['syncedLyrics'])
+    socketio.emit('new_message', {"username":"lyrics_bot", "message":last_lyrics } , room='chat_room')
 
 def fetch_program_info():
     npt = datetime.datetime.now(timezone.utc) + np_offset
@@ -65,7 +92,7 @@ def fetch_program_info():
         for show in day_schedule:
             if hour>=show['time']: cur_show=show
 
-    global last_title, last_program, last_source
+    global last_title, last_program, last_source, last_lyrics
 
     last_source = cur_show['source']
     program = cur_show['program']
@@ -88,11 +115,18 @@ def fetch_program_info():
             "title": last_title,
             "source": cur_show['source']
         }, room='chat_room')
+        
+        if ' by ' in title: socketio.start_background_task(lyrics_search,*title.split('by'))
+        else: 
+            last_lyrics=""
+            socketio.emit('new_message', {"username":"lyrics_bot", "message":"Skipped lyrics search" } , room='chat_room')
 
+def call_fetch_program_info():
+    socketio.start_background_task(fetch_program_info)
 
-fetch_program_info()
+call_fetch_program_info()
 scheduler.add_job(
-    func=fetch_program_info,
+    func=call_fetch_program_info,
     trigger=IntervalTrigger(seconds=20),
     id='minute_task',
     name='Run every minute task',
@@ -147,9 +181,13 @@ def handle_connect():
             'total_users': len(chat_users)
         })
 
-        emit('pinned_message_update', {
-            'message': pinned_message
-        })
+        if pinned_message:
+            emit('pinned_message_update', {
+                'message': pinned_message
+            })
+
+        if last_lyrics:
+            emit('new_message', {"username":"lyrics_bot", "message":last_lyrics })
 
         emit('queue_update', {
             "program": last_program,
