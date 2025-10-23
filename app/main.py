@@ -28,7 +28,7 @@ import eventlet
 eventlet.monkey_patch()
 
 chat_users = {}
-pinned_message = ""
+pinned_message = 'Send "/as" to toggle autoscroll on new user messages.'
 ADMIN_PASSWORD = "adarkmin"  
 last_title=""
 last_program=""

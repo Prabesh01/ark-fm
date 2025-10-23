@@ -1076,6 +1076,7 @@ audio.addEventListener('pause', () => {
             const pinnedMessage = document.getElementById('pinnedMessage');
             const onlineCount = document.getElementById('online-count');
             const username = '{{ username }}';
+            var autoscroll = true;
 
             // Toggle chat box
             chatIcon.addEventListener('click', function() {
@@ -1104,6 +1105,14 @@ audio.addEventListener('pause', () => {
             function sendMessageHandler() {
                 const message = messageInput.value.trim();
                 if (message) {
+                    if (message=="/as"){
+                        autoscroll=!autoscroll;
+                        messageInput.value = '';
+                        addMessage(username, "/as",true);
+                        addMessage("system", `autoscroll ${autoscroll ? "enabled" : "disabled"}`);
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                        return;
+                    }
                     socket.emit('send_message', { message: message });
                     messageInput.value = '';
                 }
@@ -1122,7 +1131,7 @@ audio.addEventListener('pause', () => {
                     sendMessageHandler();
                 }
             });
-            
+
             // Add message to chat
             function addMessage(sender, message, isOwn=false) {
                 const messageDiv = document.createElement('div');
@@ -1151,6 +1160,9 @@ messageDiv.appendChild(contentDiv);
 if(isOwn){
      chatMessages.scrollTop = chatMessages.scrollHeight;
 }else{
+    if (!autoscroll) {
+        if (username != "lyrics_bot") {return;}
+    }
     messageDiv.scrollIntoView({behavior: 'smooth', block:'start'});
 }
             }
