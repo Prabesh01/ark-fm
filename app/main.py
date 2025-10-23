@@ -74,7 +74,7 @@ def lyrics_search(song,artists):
     headers={"User-Agent": "ARK FM (https://ark.cote.ws/)"}
     r=requests.get("https://lrclib.net/api/search"+params,headers=headers).json()
 
-    if r!=0: r=r[0]
+    if r!=[]: r=r[0]
 
     last_lyrics = get_lyrics(r)
     if not last_lyrics:
