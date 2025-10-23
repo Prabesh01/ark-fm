@@ -63,14 +63,25 @@ def convert_to_plain_lrc(lrc):
     except:
         return plain_lyrics
 
+def get_lyrics(r):
+    if 'plainLyrics' in r: return r['plainLyrics']
+    elif 'syncedLyrics' in r: return convert_to_plain_lrc(r['syncedLyrics'])
+    else: return None
+
 def lyrics_search(song,artists):
     global last_lyrics
-    r=requests.get(f"https://lrclib.net/api/get?track_name={song}&artist_name={artists}",headers={"User-Agent": "ARK FM (https://ark.cote.ws/)"}).json()
-    if 'plainLyrics' in r:
-        last_lyrics=r['plainLyrics']
-    elif 'syncedLyrics' in r:
-        last_lyrics = convert_to_plain_lrc(r['syncedLyrics'])
-    else:
+    params=f"?track_name={song}&artist_name={artists}"
+    headers={"User-Agent": "ARK FM (https://ark.cote.ws/)"}
+    r=requests.get("https://lrclib.net/api/search"+params,headers=headers).json()
+
+    if r!=0: r=r[0]
+
+    last_lyrics = get_lyrics(r)
+    if not last_lyrics:
+        #r=requests.get("https://lrclib.net/api/search"+params,headers=headers}).json()
+        #if r!=0: r=r[0]
+        #last_lyrics = get_lyrics(r)
+        #if not last_lyrics:
         socketio.emit('new_message', {"username":"lyrics_bot", "message":"Couldnt find lyrics" } , room='chat_room')
         return
     socketio.emit('new_message', {"username":"lyrics_bot", "message":last_lyrics } , room='chat_room')
