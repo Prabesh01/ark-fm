@@ -58,6 +58,7 @@ if [[ "$show_stream" == "na" ]]
 then
     echo "fallback"
     kill -9 $(pgrep -fl 'ffmpeg -re -i' | sed 's/ .*//')
+    rm -f "$LOG_FILE"
     exit;
 fi
 
