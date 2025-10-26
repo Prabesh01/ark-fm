@@ -1074,10 +1074,11 @@ const title = document.getElementById('title');
 
     const eventSource = new EventSource('https://api.zeno.fm/mounts/metadata/subscribe/bfeoaqiomuquv');
     eventSource.addEventListener('message', function(event) {
+let streamTitle = '';
         try {
 const data = JSON.parse(event.data);
 if (data.streamTitle) {
-const streamTitle=data.streamTitle.slice(0, data.streamTitle.lastIndexOf('[')).trim();
+streamTitle=data.streamTitle.slice(0, data.streamTitle.lastIndexOf('[')).trim();
 title.innerText=streamTitle;
 }else{
 return;}
