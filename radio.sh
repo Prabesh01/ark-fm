@@ -54,6 +54,13 @@ fi
 IFS='|' read -r show_id show_time show_stream <<< "$cur_show"
 echo "ID: $show_id"
 
+if [[ "$show_stream" == "na" ]]
+then
+    echo "fallback"
+    kill -9 $(pgrep -fl 'ffmpeg -re -i' | sed 's/ .*//')
+    exit;
+fi
+
 re=0
 past=$(<"$LAST_FILE")
 if [[ "$past" == "$show_id" ]]

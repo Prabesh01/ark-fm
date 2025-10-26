@@ -32,7 +32,6 @@ pinned_message = 'Send "/as" to toggle autoscroll on new user messages.'
 ADMIN_PASSWORD = "adarkmin"  
 last_title=""
 last_program=""
-last_source=""
 last_lyrics=""
 
 from utils.rando import generate_username
@@ -104,11 +103,25 @@ def fetch_program_info():
         for show in day_schedule:
             if hour>=show['time']: cur_show=show
 
-    global last_title, last_program, last_source, last_lyrics
+    global last_title, last_program, last_lyrics
 
-    last_source = cur_show['source']
+    if cur_show['stream']=="na":
+        last_program = cur_show['program']
+        last_lyrics = ""
+        last_title = ""
+        socketio.emit('pinned_message', {
+            'message': "Lyrics fetch will be skipped for current program."
+        }, room='chat_room')
+        return
+
     program = cur_show['program']
     if not last_title and last_program == program: return
+
+    if program!=last_program:
+        socketio.emit('pinned_message', {
+            'message': pinned_message
+        }, room='chat_room')
+
 
     try:
         func = getattr(info_fetcher, "get_"+cur_show['id'])
@@ -122,12 +135,6 @@ def fetch_program_info():
 
         update_icecast_metadata(program,title)
 
-        socketio.emit('queue_update', {
-            "program": last_program,
-            "title": last_title,
-            "source": cur_show['source']
-        }, room='chat_room')
-        
         if ' by ' in title: socketio.start_background_task(lyrics_search,*title.split('by'))
         else: 
             last_lyrics=""
@@ -200,12 +207,6 @@ def handle_connect():
 
         if last_lyrics:
             emit('new_message', {"username":"lyrics_bot", "message":last_lyrics })
-
-        emit('queue_update', {
-            "program": last_program,
-            "title": last_title,
-            "source": last_source
-        })
 
         
 @socketio.on('disconnect')

@@ -1066,6 +1066,59 @@ audio.addEventListener('pause', () => {
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+
+
+
+const program = document.getElementById('program');
+const title = document.getElementById('title');
+
+    const eventSource = new EventSource('https://api.zeno.fm/mounts/metadata/subscribe/bfeoaqiomuquv');
+    eventSource.addEventListener('message', function(event) {
+        try {
+const data = JSON.parse(event.data);
+if (data.streamTitle) {
+const streamTitle=data.streamTitle.slice(0, data.streamTitle.lastIndexOf('[')).trim();
+title.innerText=streamTitle;
+}else{
+return;}
+} catch (error) {
+console.error('Error parsing stream data:', event.data);
+return;
+}
+            //program.innerText=data.program;
+            //title.innerText=data.title;
+            //document.getElementById('sourceBtn').setAttribute('data-url', data.source);
+
+var songname='';
+var artistname='';
+if (streamTitle.includes(' by ')){
+var songarsp = streamTitle.split('by');
+songname=songarsp[0];
+artistname=songarsp[1];
+}else{ songname= streamTitle}
+
+if ('mediaSession' in navigator) {
+ if (navigator.mediaSession.metadata) {
+
+  const existingMetadata = navigator.mediaSession.metadata;
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: songname,
+    artist: artistname,
+    album: existingMetadata.album,
+    artwork: existingMetadata.artwork
+  });
+
+ }else{
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: songname,
+    artist: artistname,
+  });
+  }
+}
+
+        });
+
+
             // Elements
             const chatIcon = document.getElementById('chatIcon');
             const chatBox = document.getElementById('chatBox');
@@ -1204,46 +1257,7 @@ socket.on('disconnect', (reason) => {
         socket.on('online_update', (data) => {
             onlineCount.innerText=data.total_users
         });
-
-
-const program = document.getElementById('program');
-const title = document.getElementById('title');
-
-        socket.on('queue_update', (data) => {
-            program.innerText=data.program;
-            title.innerText=data.title;
-            document.getElementById('sourceBtn').setAttribute('data-url', data.source);
-
-var songname='';
-var artistname='';
-if (data.title.includes(' by ')){
-var songarsp = data.title.split('by');
-songname=songarsp[0];
-artistname=songarsp[1];
-}else{ songname= data.title}
-
-if ('mediaSession' in navigator) {
- if (navigator.mediaSession.metadata) {
-
-  const existingMetadata = navigator.mediaSession.metadata;
-  navigator.mediaSession.metadata = new MediaMetadata({
-    title: songname,
-    artist: artistname,
-    album: existingMetadata.album,
-    artwork: existingMetadata.artwork
-  });
-
- }else{
-  navigator.mediaSession.metadata = new MediaMetadata({
-    title: songname,
-    artist: artistname,
-  });
-  }
-}
-
-        });
-             
-        });
+});
     </script>
 
 </html>

@@ -20,9 +20,9 @@
       "id":"car",
       "time": 15,
       "program": "Car Music",
-      "source": "https://www.youtube.com/@blackmagicmusic/live",
-      "image": "https://i.ytimg.com/vi/5m-heKJREYI/hqdefault.jpg",
-      "stream":"https://api.m3use.projectmoose.xyz/m3u/prabesh/try/68f65eaebe1ddf28fc81d383.m3u8?uid=prabesh&pkey=6vCdFjV3"
+      "source": "https://www.youtube.com/@MagicMusicGroup",
+      "image": "https://i.ytimg.com/vi/Ar8QqHmuM18/hqdefault.jpg",
+      "stream":"na"
     },
     {
       "id":"soft",
@@ -62,9 +62,9 @@
       "id":"car",
       "time": 15,
       "program": "Car Music",
-      "source": "https://www.youtube.com/@blackmagicmusic/live",
-      "image": "https://i.ytimg.com/vi/5m-heKJREYI/hqdefault.jpg",
-      "stream":"https://api.m3use.projectmoose.xyz/m3u/prabesh/try/68f65eaebe1ddf28fc81d383.m3u8?uid=prabesh&pkey=6vCdFjV3"
+      "source": "https://www.youtube.com/@MagicMusicGroup",
+      "image": "https://i.ytimg.com/vi/Ar8QqHmuM18/hqdefault.jpg",
+      "stream":"na"
     },
     {
       "id":"soft",
