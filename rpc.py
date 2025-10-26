@@ -56,11 +56,10 @@ class DiscordNowPlaying:
                 artist = artist_part.strip()
                 program = program_part.rstrip("]").strip()
         else:
-            program, _ = song_title.split("]", 1)
-            song_name = "N/A"
-            program = program.strip().strip("[")
+            song_name,program = song_title.rsplit('[',1)
+            song_name = song_name.strip() if song_name.strip() else "N/A"
+            program = program.strip().strip("]")
             artist = "N/A"
-
         return song_name, artist, program
     
     def update_status(self, song_title):
