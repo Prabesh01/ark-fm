@@ -706,12 +706,63 @@ color: #aaa;
     filter: blur(0.5px);
 }
 
+.visitors {
+  background-image: linear-gradient(to bottom,#2e2e2e,#3d3d3d);
+  border-radius: 5px;
+  display:flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  padding-right: 15px;
+  position: fixed; 
+    top: 10px;
+    right: 10px;
+  width: auto;
+  z-index: 1000;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  opacity: 0;
+}
+.light {
+  background-color: #c60505;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin: 10px;
+  animation: glow 1s infinite ease-in-out;
+}
+
+@keyframes glow {
+  0% {
+    background-color: #c60505;
+  }
+  50% {
+    background-color: #f50000;
+    box-shadow: 5px 5px 15px #e30000, -5px -5px 15px #e30000;
+    transform: rotateZ(45deg);
+  }
+  0% {
+    background-color: #c60505;
+    transform: rotateZ(80deg);
+  }
+}
+
+.visitors-text {
+  color: white;
+  font-size: 1em;
+  margin: 0;
+  line-height: 1;
+}
 </style>
 </head>
 <body>
         <nav class="nav">
             <a href=""><div class="logo">ARK FM</div></a>
         </nav>
+<div id="listenerDiv" class="visitors">
+  <div class="light"></div>
+  <p id="listenerCount" class="visitors-text">0 Listeners</p>
+</div>  
+</div>
 <!--
     <section>
 <img src="/static/img/cover3.jpg" style="height:auto;width:100%">
@@ -1131,7 +1182,8 @@ if ('mediaSession' in navigator) {
             const onlineCount = document.getElementById('online-count');
             const username = '{{ username }}';
             var autoscroll = true;
-
+            const listenerCount = document.getElementById('listenerCount'); 
+            const listenerDiv = document.getElementById('listenerDiv');
             // Toggle chat box
             chatIcon.addEventListener('click', function() {
                 chatBox.classList.toggle('active');
@@ -1231,6 +1283,7 @@ socket.on('connect', () => {
     sendMessage.disabled = false;
     messageInput.placeholder = 'Type your message...';
     connectionOverlay.classList.remove('visible');
+    listenerDiv.style.opacity="1";
 });
 socket.on('disconnect', (reason) => {
     statusEl.style.opacity = '1';
@@ -1240,6 +1293,7 @@ socket.on('disconnect', (reason) => {
         messageInput.placeholder = 'Disconnected!';
     connectionOverlay.classList.add('visible');
     document.getElementById('title').innerText="";
+    listenerDiv.style.opacity="0";
 });
 
         socket.on('new_message', (data) => {
@@ -1256,7 +1310,10 @@ socket.on('disconnect', (reason) => {
         });
 
         socket.on('online_update', (data) => {
-            onlineCount.innerText=data.total_users
+            onlineCount.innerText=data.total_users;
+        });
+        socket.on('listener_update',(data) => {
+            listenerCount.innerText=data.total_users+" Listeners"
         });
 });
     </script>

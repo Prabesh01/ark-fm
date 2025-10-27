@@ -33,13 +33,42 @@ ADMIN_PASSWORD = "adarkmin"
 last_title=""
 last_program=""
 last_lyrics=""
+last_count=0
 
 from utils.rando import generate_username
 from utils import info_fetcher
 
 import json
 sched = json.load(open(base_dir+'/static/json/schedule.json'))
+creds = json.load(open(base_dir+'/creds.json'))
 
+def get_zeno_token():
+    global creds    
+    rr = requests.post("https://tools.zeno.fm/auth/realms/broadcasters/protocol/openid-connect/token",data={"grant_type":"refresh_token","refresh_token":creds['refresh_token'],"client_id":"zeno-tools"})
+
+    if rr.status_code !=200: return None
+    with open(base_dir+'/creds.json','w') as f:
+        json.dumps(rr.json())
+    return rr.json()['access_token']
+
+def get_listener_count():
+    global last_count
+    token = creds['access_token']
+    test_token = requests.get("https://stream-tools.zenomedia.com/users/me",headers={"Authorization": "Bearer "+token})
+    if test_token.json() == {"message":"Not authorized"}: token = get_token()
+
+    if not token:
+        last_count='N/A'
+
+    rr = requests.get("https://stream-tools.zenomedia.com/stations/bfeoaqiomuquv/stats/live?include_outputs=true",headers={"Authorization": "Bearer "+token}).json()
+    totalcnt=0
+    for d in rr['data']: totalcnt += d['uniqueListeners']
+
+    if last_count==totalcnt: return
+    last_count=totalcnt
+   
+    socketio.emit('listener_update', {"total_users":last_count } , room='chat_room')
+    
 import datetime
 from datetime import timedelta
 np_offset = timedelta(hours=5, minutes=45)
@@ -147,10 +176,23 @@ call_fetch_program_info()
 scheduler.add_job(
     func=call_fetch_program_info,
     trigger=IntervalTrigger(seconds=20),
+    id='twentysec_task',
+    name='Run every 20sec',
+    replace_existing=True
+)
+
+def call_get_listener_count():
+    socketio.start_background_task(get_listener_count)
+
+call_get_listener_count()
+scheduler.add_job(
+    func=call_get_listener_count,
+    trigger=IntervalTrigger(minutes=1),
     id='minute_task',
     name='Run every minute task',
     replace_existing=True
 )
+
 
 @app.route('/')
 def index():
@@ -208,6 +250,7 @@ def handle_connect():
         if last_lyrics:
             emit('new_message', {"username":"lyrics_bot", "message":last_lyrics })
 
+        emit('listener_update', {"total_users":last_count })
         
 @socketio.on('disconnect')
 def handle_disconnect():
