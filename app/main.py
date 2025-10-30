@@ -48,7 +48,7 @@ def get_zeno_token():
 
     if rr.status_code !=200: return None
     with open(base_dir+'/creds.json','w') as f:
-        json.dumps(rr.json())
+        json.dump(rr.json(),f)
     return rr.json()['access_token']
 
 def get_listener_count():
