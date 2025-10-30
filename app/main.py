@@ -46,7 +46,7 @@ def get_zeno_token():
     global creds    
     rr = requests.post("https://tools.zeno.fm/auth/realms/broadcasters/protocol/openid-connect/token",data={"grant_type":"refresh_token","refresh_token":creds['refresh_token'],"client_id":"zeno-tools"})
 
-    if rr.status_code !=200: return None
+    if not 'access_token' in rr.json(): return None
     with open(base_dir+'/creds.json','w') as f:
         json.dump(rr.json(),f)
     return rr.json()['access_token']
@@ -55,7 +55,7 @@ def get_listener_count():
     global last_count
     token = creds['access_token']
     test_token = requests.get("https://stream-tools.zenomedia.com/users/me",headers={"Authorization": "Bearer "+token})
-    if test_token.json() == {"message":"Not authorized"}: token = get_token()
+    if test_token.json() == {"message":"Not authorized"}: token = get_zeno_token()
 
     if not token:
         last_count='N/A'
@@ -63,7 +63,6 @@ def get_listener_count():
     rr = requests.get("https://stream-tools.zenomedia.com/stations/bfeoaqiomuquv/stats/live?include_outputs=true",headers={"Authorization": "Bearer "+token}).json()
     totalcnt=0
     for d in rr['data']: totalcnt += d['uniqueListeners']
-
     if last_count==totalcnt: return
     last_count=totalcnt
    
