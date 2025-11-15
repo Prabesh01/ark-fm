@@ -186,9 +186,9 @@ let card = document.querySelector(`.spotify-card[data-uid="${uid}"]`);
     card.className = 'spotify-card';
     card.setAttribute('data-uid', uid);
     card.innerHTML = `
-      <img src="${cover}" class="cover" alt="Cover" />
+      <a href="https://open.spotify.com/track/${track}" target="_blank"><img src="${cover}" class="cover" alt="Cover" /></a>
       <div class="info">
-        <a href="${track}" target="_blank"><h3 class="title">${title}</h3></a>
+        <h3 class="title">${title}</h3>
         <p class="artist">${artist}</p>
         <div class="user">
           <img src="${profile}" class="user-pic" alt="${user}" />
