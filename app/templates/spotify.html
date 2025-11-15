@@ -1,0 +1,218 @@
+
+<style>
+#cardsContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px; /* space between cards */
+  padding: 16px;
+}
+
+.spotify-card {
+  display: flex;
+  align-items: center;
+  background: rgba(67, 88, 68, 255);
+  padding: 12px;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 360px;
+  gap: 12px;
+  color: white;
+}
+
+.cover {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.info {
+  flex: 1;
+  overflow: hidden;
+}
+
+.title {
+  font-size: 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.artist {
+  font-size: 0.85rem;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+.user {
+  display: flex;
+  align-items: center;
+  margin-top: 6px;
+  gap: 6px;
+}
+
+.user-pic {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.username {
+  font-size: 0.8rem;
+  opacity: 0.9;
+}
+
+.play-btn {
+  background: white;
+  color: #2b4638;
+  border: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.play-btn:hover {
+  background: #d9d9d9;
+}
+
+/* Responsive */
+@media (max-width: 400px) {
+  .spotify-card {
+    padding: 10px;
+    gap: 10px;
+  }
+  .title {
+    font-size: 0.9rem;
+  }
+  .artist {
+    font-size: 0.75rem;
+  }
+}
+
+
+</style>
+{% if alert %}
+<script>alert("{{alert}}");window.location="/spotify"</script>
+{% endif %}
+{% if user %}
+Hi {{user}}
+{% else %}
+<a href="https://accounts.spotify.com/authorize?client_id=bf1d72ef1ca54ea1843d29b74a5e7400&response_type=code&redirect_uri=https://ark.cote.ws/callback&scope=app-remote-control,user-modify-playback-state">Setup Spotify</a>
+{% endif %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+
+
+<div id="cardsContainer">
+
+</div>
+
+<script>
+
+const cardsContainer = document.getElementById('cardsContainer');
+            const socket = io({reconnection: true,reconnectionAttempts: Infinity,reconnectionDelay: 1000,reconnectionDelayMax: 5000,timeout: 20000});
+let currentActiveUid = null;
+const activeCards = {};
+
+function stop_all(){
+  for (const uid in activeCards) {
+    if (activeCards.hasOwnProperty(uid)) {
+      const cardInfo = activeCards[uid];
+      if (cardInfo.status === 'playing') {
+        cardInfo.status = 'paused';
+        cardInfo.card.querySelector('.play-btn').textContent = '▶';
+      }
+    }
+  }
+  currentActiveUid = null;
+}
+
+socket.on('connect', () => {
+socket.emit('hi_spotify', { });
+});
+socket.on('disconnect', (reason) => {
+stop_all();
+});
+
+
+function handlePlayPause(uid) {
+{% if not user %}
+alert("spotify isn't connected!");
+return;
+{% endif %}
+  const cardInfo = activeCards[uid];
+  const card = cardInfo.card;
+  const btn = card.querySelector('.play-btn');
+  const track = cardInfo.track;
+
+  if (cardInfo.status === 'playing') {
+    // If currently playing, pause it
+    cardInfo.status = 'paused';
+    btn.textContent = '▶'; // change icon to play
+    socket.emit('stop_listen_along');
+    currentActiveUid = null;
+  } else {
+    for (const otherUid in activeCards) {
+      if (activeCards.hasOwnProperty(otherUid)) {
+        const otherCardInfo = activeCards[otherUid];
+        if (otherCardInfo.status === 'playing') {
+          otherCardInfo.status = 'paused';
+          otherCardInfo.card.querySelector('.play-btn').textContent = '▶';
+        }
+      }
+    }
+    cardInfo.status = 'playing';
+    btn.textContent = '⏸'; // change icon to pause
+    socket.emit('listen_along', { uid, track });
+    currentActiveUid = uid;
+  }
+}
+
+socket.on('error', (data) => {
+const err = data.message;
+alert(err);
+stop_all();
+});
+
+socket.on('sp_update', (data) => {
+       const { uid, track, user, profile, title, artist, cover } = data;
+let card = document.querySelector(`.spotify-card[data-uid="${uid}"]`);
+  if (!card) {
+    // Create new card
+    card = document.createElement('div');
+    card.className = 'spotify-card';
+    card.setAttribute('data-uid', uid);
+    card.innerHTML = `
+      <img src="${cover}" class="cover" alt="Cover" />
+      <div class="info">
+        <a href="${track}" target="_blank"><h3 class="title">${title}</h3></a>
+        <p class="artist">${artist}</p>
+        <div class="user">
+          <img src="${profile}" class="user-pic" alt="${user}" />
+          <span class="username">${user}</span>
+        </div>
+      </div>
+      <button class="play-btn">▶</button>
+    `;
+    // Append to container
+    cardsContainer.appendChild(card);
+  } else {
+    // Update existing card if needed
+    card.querySelector('.title').textContent = title;
+    card.querySelector('.artist').textContent = artist;
+    card.querySelector('.cover').src = cover;
+    card.querySelector('.user-pic').src = profile;
+    card.querySelector('.username').textContent = user;
+  }
+  const playBtn = card.querySelector('.play-btn');
+  playBtn.onclick = () => {
+    handlePlayPause(uid);
+  };
+   activeCards[uid] = { card, status: 'paused', track: track };
+});
+
+</script>
+

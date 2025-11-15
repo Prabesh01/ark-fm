@@ -1,5 +1,6 @@
-from flask import Flask, render_template, request, jsonify, session
-from flask_socketio import SocketIO, emit, join_room
+
+from flask import Flask, render_template, request, jsonify, session, make_response, redirect
+from flask_socketio import SocketIO, emit, join_room, leave_room
 import random
 import string
 import secrets
@@ -250,9 +251,17 @@ def handle_connect():
             emit('new_message', {"username":"lyrics_bot", "message":last_lyrics })
 
         emit('listener_update', {"total_users":last_count })
-        
+
+listen_alongs = {}
+
 @socketio.on('disconnect')
 def handle_disconnect():
+    global listen_alongs
+    sp_token = request.cookies.get('access_token')
+    if sp_token:
+        for la in listen_alongs:
+            if sp_token in listen_alongs[la]: listen_alongs[la].remove(sp_token)
+
     global chat_users
     if 'user' in session:
         user = session['user']
@@ -280,6 +289,92 @@ def handle_send_message(data):
     }
     
     emit('new_message', message_data, room='chat_room')
+
+@app.get('/spotify')
+def sp_home():
+    sp_token=request.cookies.get('access_token')
+    sp_refresh=request.cookies.get('refresh_token')
+    user=None
+    if sp_token:
+        r=requests.get('https://api.spotify.com/v1/me',headers = {"Authorization":"Bearer "+sp_token})
+        if r.status_code==200:
+            user=r.json()['display_name']
+        elif sp_refresh:
+            r=requests.post("https://accounts.spotify.com/api/token",data={"grant_type":"refresh_token","refresh_token":sp_refresh})
+            if r.status_code==200:
+                sp_token=r.json()['access_token']
+                user=requests.get('https://api.spotify.com/v1/me',headers = {"Authorization":"Bearer "+sp_token}).json()['display_name']
+    html_content = render_template('spotify.html', user=user)
+    resp = make_response(html_content)
+    if not user:
+        resp.delete_cookie('refresh_token', path='/')
+        resp.delete_cookie('access_token', path='/')
+    else:
+        resp.set_cookie('refresh_token', sp_refresh, path='/', httponly=True, samesite='Lax')
+        resp.set_cookie('access_token', sp_token, path='/', httponly=True, samesite='Lax')
+    return resp
+
+@socketio.on('hi_spotify')
+def handle_spotify_con(data):
+    leave_room('chat_room')
+    join_room('spotify')
+
+@socketio.on('stop_listen_along')
+def stop_listen_along():
+    sp_token = request.cookies.get('access_token')
+    if not sp_token: return
+    for la in listen_alongs:
+        if sp_token in listen_alongs[la]: listen_alongs[la].remove(sp_token)
+    rr=requests.put("https://api.spotify.com/v1/me/player/pause",headers={"Authorization":"Bearer "+sp_token})
+
+@socketio.on('listen_along')
+def listen_along(data):
+    global listen_alongs
+    uid = data.get('uid', '').strip()
+    track = data.get('track','').strip()
+    sp_token = request.cookies.get('access_token')
+    if not sp_token: return
+    for la in listen_alongs:
+        if sp_token in listen_alongs[la]: listen_alongs[la].remove(sp_token)
+    if not uid in listen_alongs: listen_alongs[uid]=[]
+    listen_alongs[uid].append(sp_token)
+
+    rr=requests.put("https://api.spotify.com/v1/me/player/play",headers={"Authorization":"Bearer "+sp_token},json={"uris":["spotify:track:"+track]})
+    if rr.status_code!=204: emit('error', {"message":rr.json()['error']['message'] })
+
+@app.get('/activity')
+def sp_activity():
+    track = request.args.get('track')
+    uid = request.args.get('uid')
+    user = request.args.get('user')
+    profile = request.args.get('profile')
+    title = request.args.get('title')
+    artist=request.args.get('artist')
+    cover=request.args.get('cover')
+
+    socketio.emit('sp_update', {"uid":uid,"track":track,"user":user,"profile":profile,"title":title,"artist": artist,"cover":cover} , room='spotify')
+
+    if uid in listen_alongs:
+        for listeners in listen_alongs[uid]:
+            rr=requests.put("https://api.spotify.com/v1/me/player/play",headers={"Authorization":"Bearer "+listeners},json={"uris":["spotify:track:"+track]})
+            print(rr.text)
+
+    return 'OK'
+
+@app.get('/callback')
+def sp_callback():
+    code = request.args.get('code')
+    r=requests.post("https://accounts.spotify.com/api/token",data={"grant_type":"authorization_code","code":code,"redirect_uri":"https://ark.cote.ws/callback","client_id":"bf1d72ef1ca54ea1843d29b74a5e7400","client_secret":"6936135d83ab49a2b988cbddf5dbefce"}).json()
+    if not 'access_token' in r: return render_template('spotify.html',alert="Spotify Oauth Failed! Try again later.")
+
+    user=requests.get('https://api.spotify.com/v1/me',headers = {"Authorization":"Bearer "+r['access_token']}).json()['display_name']
+    html_content = redirect('/spotify')
+    resp = make_response(html_content)
+
+    resp.set_cookie('refresh_token', r['refresh_token'], path='/', httponly=True, samesite='Lax')
+    resp.set_cookie('access_token', r['access_token'], path='/', httponly=True, samesite='Lax')
+
+    return resp
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=5000)
