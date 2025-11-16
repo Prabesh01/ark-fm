@@ -177,6 +177,11 @@ alert(err);
 stop_all();
 });
 
+socket.on('sp_remove', (data) => {
+let card = document.querySelector(`.spotify-card[data-uid="${data.uid}"]`);
+card.remove();
+});
+
 socket.on('sp_update', (data) => {
        const { uid, track, user, profile, title, artist, cover } = data;
 let card = document.querySelector(`.spotify-card[data-uid="${uid}"]`);

@@ -361,6 +361,14 @@ def sp_activity():
 
     return 'OK'
 
+@app.get('/activity_rm')
+def sp_activity_rm():
+    uid = request.args.get('uid')
+
+    socketio.emit('sp_remove', {"uid":uid})
+
+    listen_alongs.pop(uid,None)
+
 @app.get('/callback')
 def sp_callback():
     code = request.args.get('code')
