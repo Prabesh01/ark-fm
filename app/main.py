@@ -6,6 +6,7 @@ import string
 import secrets
 from datetime import datetime, timezone
 import os
+import threading
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -409,6 +410,57 @@ def sp_callback():
     resp.set_cookie('access_token', r['access_token'], path='/', httponly=True, samesite='Lax')
 
     return resp
+
+@app.get('/playlist')
+def get_playlist():
+    global radio_queue
+
+    uid = request.args.get('uid', '').strip()
+    if not uid in radio_queue: return 'Invalid radio'
+
+    plid = request.args.get('playlist','').strip()
+    sp_token = request.cookies.get('access_token')
+
+    url = f'https://api.spotify.com/v1/playlists/{plid}/tracks'
+    headers = {'Authorization': f'Bearer {sp_token}'}
+
+    tracks = []
+    while url:
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            data = response.json()
+            for item in data['items']:
+                item=item['track']
+                try: tracks.append([item['id'],item['name'],item["artists"][0]['name'],int(item['duration_ms']/1000)-1])
+                except: pass
+            url = data.get('next')
+        else:
+            return f"Error fetching playlist: {response.text}"
+
+    if not tracks: return "empty"
+    radio_queue[uid]= tracks
+    with open(base_dir+"/radio_queue.json","w") as f: json.dump(radio_queue,f)
+    return "OK"
+
+radio_queue=json.load(open(base_dir+"/radio_queue.json"))
+def play_radio(radio,index):
+    ltn = len(radio_queue[radio])
+    if ltn==0: return
+    if index>ltn: index=0
+    to_play=radio_queue[radio][index]
+
+    with app.test_request_context('/activity', query_string={
+        'track': to_play[0],
+        'uid': radio,
+        'title': to_play[1],
+        'artist': to_play[2],
+    }): sp_activity()
+
+    timer = threading.Timer(to_play[-1], play_radio,args=(radio,index+1))
+    timer.start()
+
+for radio in radio_queue:
+    play_radio(radio,0)
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=5000)
