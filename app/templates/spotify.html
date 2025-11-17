@@ -1,4 +1,4 @@
-
+    <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 #cardsContainer {
   display: grid;
@@ -179,14 +179,21 @@ stop_all();
 
 socket.on('sp_remove', (data) => {
 let card = document.querySelector(`.spotify-card[data-uid="${data.uid}"]`);
-card.remove();
+try{ card.remove();}
+catch{}
 });
 
-socket.on('sp_update', (data) => {
-       const { uid, track, user, profile, title, artist, cover } = data;
-let card = document.querySelector(`.spotify-card[data-uid="${uid}"]`);
-  if (!card) {
-    // Create new card
+socket.on('sp_list',(data) => {
+  for (const uid in data) {
+    const item = data[uid];
+    addCard(uid,item);
+  }
+});
+
+function addCard(uid, item){
+    let card = document.querySelector(`.spotify-card[data-uid="${uid}"]`);
+    const { track, user, profile, title, artist, cover } = item;
+    if(!card){
     card = document.createElement('div');
     card.className = 'spotify-card';
     card.setAttribute('data-uid', uid);
@@ -202,21 +209,23 @@ let card = document.querySelector(`.spotify-card[data-uid="${uid}"]`);
       </div>
       <button class="play-btn">▶</button>
     `;
-    // Append to container
     cardsContainer.appendChild(card);
-  } else {
-    // Update existing card if needed
-    card.querySelector('.title').textContent = title;
-    card.querySelector('.artist').textContent = artist;
-    card.querySelector('.cover').src = cover;
-    card.querySelector('.user-pic').src = profile;
-    card.querySelector('.username').textContent = user;
-  }
-  const playBtn = card.querySelector('.play-btn');
-  playBtn.onclick = () => {
-    handlePlayPause(uid);
-  };
+    }else{
+      card.querySelector('.title').textContent = title;
+      card.querySelector('.artist').textContent = artist;
+      card.querySelector('.cover').src = cover;
+      card.querySelector('.user-pic').src = profile;
+      card.querySelector('.username').textContent = user;
+    }
+    const playBtn = card.querySelector('.play-btn');
+    playBtn.onclick = () => {
+      handlePlayPause(uid);
+    };
    activeCards[uid] = { card, status: 'paused', track: track };
+}
+
+socket.on('sp_update', (data) => {
+    addCard(data.uid,data);
 });
 
 </script>

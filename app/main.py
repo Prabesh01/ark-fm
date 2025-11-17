@@ -253,6 +253,7 @@ def handle_connect():
         emit('listener_update', {"total_users":last_count })
 
 listen_alongs = {}
+sp_activities={}
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -317,6 +318,7 @@ def sp_home():
 @socketio.on('hi_spotify')
 def handle_spotify_con(data):
     leave_room('chat_room')
+    socketio.emit('sp_list', sp_activities)
     join_room('spotify')
 
 @socketio.on('stop_listen_along')
@@ -352,7 +354,10 @@ def sp_activity():
     artist=request.args.get('artist')
     cover=request.args.get('cover')
 
-    socketio.emit('sp_update', {"uid":uid,"track":track,"user":user,"profile":profile,"title":title,"artist": artist,"cover":cover} , room='spotify')
+    sp_data={"track":track,"user":user,"profile":profile,"title":title,"artist": artist,"cover":cover}
+    sp_activities[uid]=sp_data
+    sp_data['uid']=uid
+    socketio.emit('sp_update', sp_data , room='spotify')
 
     if uid in listen_alongs:
         for listeners in listen_alongs[uid]:
@@ -365,9 +370,12 @@ def sp_activity():
 def sp_activity_rm():
     uid = request.args.get('uid')
 
-    socketio.emit('sp_remove', {"uid":uid})
+    sp_activities.pop(uid,None)
+    socketio.emit('sp_remove', {"uid":uid} , room='spotify')
 
     listen_alongs.pop(uid,None)
+
+    return 'OK'
 
 @app.get('/callback')
 def sp_callback():
