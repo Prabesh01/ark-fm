@@ -1,6 +1,43 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-#cardsContainer {
+
+.sp-btn {
+    color: #fff;
+    background-color: #198754;
+    border-color: #198754;
+    padding:0.75rem;
+
+border-width: 1px;
+border-style: solid;
+border-color: transparent;
+border-radius: 0.375rem;
+}
+
+.sp-btn:hover {
+    color: #fff;
+    background-color: #157347;
+}
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 24px;
+            color: #1DB954; /* Spotify green */
+        }
+        
+        .section-title {
+            margin-top: 24px;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+#cardsContainer, #favoritesContainer {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 16px; /* space between cards */
@@ -63,6 +100,29 @@
   opacity: 0.9;
 }
 
+        .actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .favorite-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: rgba(255, 255, 255, 0.5);
+            transition: color 0.2s;
+        }
+        
+        .favorite-btn:hover {
+            color: yellow;
+        }
+        
+        .favorite-btn.favorited {
+            color: yellow;
+        }
+
 .play-btn {
   background: white;
   color: #2b4638;
@@ -92,7 +152,12 @@
     font-size: 0.75rem;
   }
 }
-
+        .empty-message {
+            text-align: center;
+            opacity: 0.7;
+            padding: 20px;
+            font-style: italic;
+        }
 
 </style>
 {% if alert %}
@@ -101,18 +166,29 @@
 {% if user %}
 Hi {{user}}
 {% else %}
-<a href="https://accounts.spotify.com/authorize?client_id=bf1d72ef1ca54ea1843d29b74a5e7400&response_type=code&redirect_uri=https://ark.cote.ws/callback&scope=app-remote-control,user-modify-playback-state">Setup Spotify</a>
+<a href="https://accounts.spotify.com/authorize?client_id=bf1d72ef1ca54ea1843d29b74a5e7400&response_type=code&redirect_uri=https://ark.cote.ws/callback&scope=app-remote-control,user-modify-playback-state"><button id="authorize" class="sp-btn"><i class="fa fa-spotify" aria-hidden="true"></i>
+                                                Authorize on Spotify</button>
+</a>
 {% endif %}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 
-
-<div id="cardsContainer">
-
+<div class="container">
+    <div id="favorites">
+     <h2 class="section-title">Favorites</h2>
+    <div id="favoritesContainer"></div>
+     <p id="fav_text" class="empty-message">No favorites yet. Star someone to add it here.</p>
+  </div>
+      <h2 class="section-title">Jams</h2>
+    <div id="cardsContainer"></div>
+    <p id="rest_text" class="empty-message">Seems everyone is asleep..</p>
 </div>
-
 <script>
+let favorites = JSON.parse(localStorage.getItem('spotifyFavorites')) || [];
 
 const cardsContainer = document.getElementById('cardsContainer');
+const favContainer = document.getElementById('favoritesContainer');
+const fav_text = document.getElementById('fav_text');
+const rest_text = document.getElementById('rest_text');
             const socket = io({reconnection: true,reconnectionAttempts: Infinity,reconnectionDelay: 1000,reconnectionDelayMax: 5000,timeout: 20000});
 let currentActiveUid = null;
 const activeCards = {};
@@ -179,7 +255,13 @@ stop_all();
 
 socket.on('sp_remove', (data) => {
 let card = document.querySelector(`.spotify-card[data-uid="${data.uid}"]`);
-try{ card.remove();}
+try{ 
+delete activeCards[data.uid];
+card.remove();
+if(activeCards.length === 0) {
+rest_text.style.display="block";
+}
+}
 catch{}
 });
 
@@ -197,6 +279,9 @@ function addCard(uid, item){
     card = document.createElement('div');
     card.className = 'spotify-card';
     card.setAttribute('data-uid', uid);
+
+    const isFavorited = favorites.includes(uid);
+ 
     card.innerHTML = `
       <a href="https://open.spotify.com/track/${track}" target="_blank"><img src="${cover}" class="cover" alt="Cover" /></a>
       <div class="info">
@@ -207,9 +292,24 @@ function addCard(uid, item){
           <span class="username">${user}</span>
         </div>
       </div>
-      <button class="play-btn">▶</button>
+                    <div class="actions">
+                        <button class="favorite-btn ${isFavorited ? 'favorited' : ''}">★</button>
+                        <button class="play-btn">▶</button>
+                    </div>
     `;
+let isFav=false;
+for (const fid of favorites) {
+if (fid===uid) {
+    isFav=true;
+    favoritesContainer.appendChild(card);
+    fav_text.style.display="none";
+    break;
+}
+}
+if(!isFav){
+    rest_text.style.display="none";
     cardsContainer.appendChild(card);
+}
     }else{
       card.querySelector('.title').textContent = title;
       card.querySelector('.artist').textContent = artist;
@@ -221,9 +321,76 @@ function addCard(uid, item){
     playBtn.onclick = () => {
       handlePlayPause(uid);
     };
+
+            const favoriteBtn = card.querySelector('.favorite-btn');
+            favoriteBtn.onclick = () => {
+                toggleFavorite(uid, favoriteBtn);
+            };
+
    activeCards[uid] = { card, status: 'paused', track: track };
+
+// updateFavoritesDisplay();
 }
 
+        function toggleFavorite(uid, button) {
+            const index = favorites.indexOf(uid);
+            const card = activeCards[uid].card;
+
+            if (index === -1) {
+                // Add to favorites
+                favorites.push(uid);
+                button.classList.add('favorited');
+                favoritesContainer.appendChild(card);
+                fav_text.style.display="none";
+                //card.remove();
+            } else {
+                // Remove from favorites
+                favorites.splice(index, 1);
+                button.classList.remove('favorited');
+
+                cardsContainer.appendChild(card);
+            rest_text.style.display="none";
+            if (favorites.length === 0) {
+             fav_text.style.display="block";
+             }
+
+                // card.remove()
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('spotifyFavorites', JSON.stringify(favorites));
+            
+            // Update favorites display
+            // updateFavoritesDisplay();
+        }
+
+        function updateFavoritesDisplay() {
+            favoritesContainer.innerHTML = '';
+            
+            if (favorites.length === 0) {
+             fav_text.style.display="block";
+             return;
+             }
+
+favorites.forEach(uid => {
+if (activeCards[uid]) {
+fav_text.style.display="none";
+const card = activeCards[uid].card.cloneNode(true);
+// activeCards[uid].card.remove();
+const favoriteBtn = card.querySelector('.favorite-btn');
+favoriteBtn.classList.add('favorited');
+
+const playBtn = card.querySelector('.play-btn');
+                    playBtn.onclick = () => {
+                        handlePlayPause(uid);
+                    };
+                    favoriteBtn.onclick = () => {
+                        toggleFavorite(uid, favoriteBtn);
+                    };
+favoritesContainer.appendChild(card);
+}
+});
+}
 socket.on('sp_update', (data) => {
     addCard(data.uid,data);
 });
