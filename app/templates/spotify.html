@@ -267,8 +267,9 @@ let card = document.querySelector(`.spotify-card[data-uid="${data.uid}"]`);
 try{ 
 delete activeCards[data.uid];
 card.remove();
-if(activeCards.length === 0) {
+if(Object.keys(activeCards).length === 0) {
 rest_text.style.display="block";
+fav_text.style.display="block";
 }
 }
 catch{}
@@ -359,10 +360,6 @@ if(!isFav){
 
                 cardsContainer.appendChild(card);
             rest_text.style.display="none";
-            if (favorites.length === 0) {
-             fav_text.style.display="block";
-             }
-
                 // card.remove()
             }
             
