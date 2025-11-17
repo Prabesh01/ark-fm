@@ -284,14 +284,16 @@ socket.on('sp_list',(data) => {
 
 function addCard(uid, item){
     let card = document.querySelector(`.spotify-card[data-uid="${uid}"]`);
-    const { track, user, profile, title, artist, cover } = item;
+    const { track, user, profile, title, artist, cover, count } = item;
+    const countSpanContent = count !== 0 ? `(${count})` : '';
+
     if(!card){
     card = document.createElement('div');
     card.className = 'spotify-card';
     card.setAttribute('data-uid', uid);
 
     const isFavorited = favorites.includes(uid);
- 
+
     card.innerHTML = `
       <a href="https://open.spotify.com/track/${track}" target="_blank"><img src="${cover}" class="cover" alt="Cover" /></a>
       <div class="info">
@@ -299,7 +301,7 @@ function addCard(uid, item){
         <p class="artist">${artist}</p>
         <div class="user">
           <img src="${profile}" class="user-pic" alt="${user}" />
-          <span class="username">${user}</span>
+          <span class="username">${user}</span> <span class="count">${countSpanContent}</span>
         </div>
       </div>
                     <div class="actions">
@@ -326,6 +328,7 @@ if(!isFav){
       card.querySelector('.cover').src = cover;
       card.querySelector('.user-pic').src = profile;
       card.querySelector('.username').textContent = user;
+      card.querySelector('.count').textContent = countSpanContent;
     }
     const playBtn = card.querySelector('.play-btn');
     playBtn.onclick = () => {
@@ -399,6 +402,11 @@ favoritesContainer.appendChild(card);
 }
 socket.on('sp_update', (data) => {
     addCard(data.uid,data);
+});
+socket.on('count_update', (data) => {
+let card = document.querySelector(`.spotify-card[data-uid="${data.uid}"]`);
+const countSpanContent = data.count !== 0 ? `(${data.count})` : '';
+card.querySelector('.count').textContent = countSpanContent;
 });
 
 </script>
