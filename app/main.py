@@ -301,7 +301,7 @@ def sp_home():
         if r.status_code==200:
             user=r.json()['display_name']
         elif sp_refresh:
-            r=requests.post("https://accounts.spotify.com/api/token",data={"grant_type":"refresh_token","refresh_token":sp_refresh})
+            r=requests.post("https://accounts.spotify.com/api/token",data={"grant_type":"refresh_token","refresh_token":sp_refresh},auth=("bf1d72ef1ca54ea1843d29b74a5e7400","6936135d83ab49a2b988cbddf5dbefce"))
             if r.status_code==200:
                 sp_token=r.json()['access_token']
                 user=requests.get('https://api.spotify.com/v1/me',headers = {"Authorization":"Bearer "+sp_token}).json()['display_name']
