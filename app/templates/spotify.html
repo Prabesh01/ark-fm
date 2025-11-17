@@ -400,7 +400,6 @@ card.innerHTML = `
                 handlePlayPause(uid);
             };
 radioContainer.appendChild(card);
-activeCards[uid] = { card, status: 'paused', track};
 }else{
       card.querySelector('a').href = `https://open.spotify.com/track/${track}`;
       card.querySelector('.radio-title').textContent = title;
@@ -408,6 +407,7 @@ activeCards[uid] = { card, status: 'paused', track};
       card.querySelector('.rname').textContent = uid;
       card.querySelector('.count').textContent = countSpanContent;
 }
+activeCards[uid] = { card, status: 'paused', track: track };
 }
 
 
