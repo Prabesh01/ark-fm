@@ -1,5 +1,14 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: white;
+            margin: 0;
+            padding: 0;
+        }
+
 .sp-btn {
     color: #fff;
     background-color: #198754;
@@ -36,7 +45,7 @@ border-radius: 0.375rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-#cardsContainer, #favoritesContainer {
+#cardsContainer, #favoritesContainer, #radioContainer {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 16px; /* space between cards */
@@ -142,6 +151,69 @@ border-radius: 0.375rem;
             color: white;
         }
 
+        .radio-card {
+            background: rgba(67, 88, 68, 255);
+            border-radius: 12px;
+            padding: 16px;
+            color: white;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .radio-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .radio-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex: 1;
+        }
+                
+        .radio-title {
+            font-size: 1.2rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin: 0 0 4px 0;
+            font-weight: 600;
+        }
+        
+        .radio-artist {
+            font-size: 1rem;
+            opacity: 0.8;
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .radio-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        
+        .radio-icon i {
+            font-size: 1.2rem;
+        }
+        
+        .radio-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+
 /* Responsive */
 @media (max-width: 400px) {
   .spotify-card {
@@ -154,6 +226,15 @@ border-radius: 0.375rem;
   .artist {
     font-size: 0.75rem;
   }
+            .radio-card {
+                padding: 12px;
+            }
+            .radio-title {
+                font-size: 1.1rem;
+            }
+            .radio-artist {
+                font-size: 0.9rem;
+            }
 }
         .empty-message {
             text-align: center;
@@ -163,19 +244,22 @@ border-radius: 0.375rem;
         }
 
 </style>
+<br>
 {% if alert %}
 <script>alert("{{alert}}");window.location="/spotify"</script>
 {% endif %}
 {% if user %}
-Hi {{user}}
+<h1>Hi {{user}}</h1>
 {% else %}
-<a href="https://accounts.spotify.com/authorize?client_id=bf1d72ef1ca54ea1843d29b74a5e7400&response_type=code&redirect_uri=https://ark.cote.ws/callback&scope=app-remote-control,user-modify-playback-state"><button id="authorize" class="sp-btn"><i class="fa fa-spotify" aria-hidden="true"></i>
-                                                Authorize on Spotify</button>
+<h1><a href="https://accounts.spotify.com/authorize?client_id=bf1d72ef1ca54ea1843d29b74a5e7400&response_type=code&redirect_uri=https://ark.cote.ws/callback&scope=app-remote-control,user-modify-playback-state"><button id="authorize" class="sp-btn"><i class="fa fa-spotify" aria-hidden="true"></i>
+                                                Authorize on Spotify</button></h1>
 </a>
 {% endif %}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 
 <div class="container">
+    <h2 class="section-title">Spotify Radio</h2>
+<div id="radioContainer"></div>
     <div id="favorites">
      <h2 class="section-title">Favorites</h2>
     <div id="favoritesContainer"></div>
@@ -190,6 +274,7 @@ let favorites = JSON.parse(localStorage.getItem('spotifyFavorites')) || [];
 
 const cardsContainer = document.getElementById('cardsContainer');
 const favContainer = document.getElementById('favoritesContainer');
+const radioContainer = document.getElementById('radioContainer');
 const fav_text = document.getElementById('fav_text');
 const rest_text = document.getElementById('rest_text');
             const socket = io({reconnection: true,reconnectionAttempts: Infinity,reconnectionDelay: 1000,reconnectionDelayMax: 5000,timeout: 20000});
@@ -282,7 +367,49 @@ socket.on('sp_list',(data) => {
   }
 });
 
+function addRadio(uid,item){
+let card = document.querySelector(`.radio-card[data-uid="${uid}"]`);
+const { track, title, artist, count} = item;
+const countSpanContent = count !== 0 ? ` (${count})` : '';
+if(!card){
+card = document.createElement('div');
+card.className = 'radio-card';
+card.setAttribute('data-uid', uid);
+card.innerHTML = `
+                <div class="radio-header">
+                    <div class="radio-icon">
+                        <i class="fas fa-broadcast-tower"></i>
+                    </div>
+                    <span class="rname">${uid}</span><span class="count">${countSpanContent}</span>
+                </div>
+                <div class="radio-content">
+                    <div class="info">
+                        <h3 class="radio-title">${title}</h3>
+                        <p class="radio-artist">${artist}</p>
+                    </div>
+                    <button class="play-btn">▶</button>
+                </div>
+            `;
+            const playBtn = card.querySelector('.play-btn');
+            playBtn.onclick = () => {
+                handlePlayPause(uid);
+            };
+radioContainer.appendChild(card);
+activeCards[uid] = { card, status: 'paused', track};
+}else{
+      card.querySelector('.radio-title').textContent = title;
+      card.querySelector('.radio-artist').textContent = artist;
+      card.querySelector('.rname').textContent = uid;
+      card.querySelector('.count').textContent = countSpanContent;
+}
+}
+
+
 function addCard(uid, item){
+    if(isNaN(uid)){
+     addRadio(uid,item);
+     return;
+    }
     let card = document.querySelector(`.spotify-card[data-uid="${uid}"]`);
     const { track, user, profile, title, artist, cover, count } = item;
     const countSpanContent = count !== 0 ? `(${count})` : '';
@@ -404,7 +531,7 @@ socket.on('sp_update', (data) => {
     addCard(data.uid,data);
 });
 socket.on('count_update', (data) => {
-let card = document.querySelector(`.spotify-card[data-uid="${data.uid}"]`);
+let card = document.querySelector(`div[data-uid="${data.uid}"]`);
 const countSpanContent = data.count !== 0 ? `(${data.count})` : '';
 card.querySelector('.count').textContent = countSpanContent;
 });
