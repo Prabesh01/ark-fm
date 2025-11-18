@@ -294,13 +294,13 @@ toggleBtn.addEventListener('click', () => {
 
 function updateIngores(){
   const ignoredElements = document.querySelectorAll('.spotify-card.ignored');
-   console.log(ignoredElements);
-     console.log(showIgnored);
+   if(ignoredElements.length==0){ toggleBtn.style.display='none'; return;}
+   toggleBtn.style.display='block';
   ignoredElements.forEach(element => {
     if (showIgnored) { element.classList.remove('hide'); }
     else {element.classList.add('hide');}
   });
-  toggleBtn.textContent = showIgnored ? 'Hide Ignored Users' : 'Show Ignored Users';
+  toggleBtn.textContent = showIgnored ? `Hide Ignored Users (${ignoredElements.length})` : `Show Ignored Users  (${ignoredElements.length})`;
 }
 updateIngores();
 
@@ -544,7 +544,43 @@ if(!isFav){
       card.querySelector('.count').textContent = countSpanContent;
     }
     const playBtn = card.querySelector('.play-btn');
-    playBtn.onclick = () => {
+
+        let hoverTimer;
+        let revertTimer;
+
+        playBtn.addEventListener('mouseenter', () => {
+            if (playBtn.textContent!="+"){return;}
+            // Clear any existing timers when hover starts
+            clearTimeout(hoverTimer);
+            clearTimeout(revertTimer);
+
+            // Start timer to change to ⏸ after 3 seconds
+            hoverTimer = setTimeout(() => {
+                if (playBtn.textContent!="+"){return;}
+                playBtn.textContent = '⏸';
+
+                revertTimer = setTimeout(() => {
+                    playBtn.textContent = '+';
+                }, 3000);
+
+            }, 1200);
+        });
+
+        playBtn.addEventListener('mouseleave', () => {
+            return;
+            // Clear timers when mouse leaves and immediately revert to +
+            clearTimeout(hoverTimer);
+            clearTimeout(revertTimer);
+
+            if (playBtn.textContent=="▶"){return;}
+            playBtn.textContent = '+';
+        });
+
+
+            playBtn.onclick = () => {
+            clearTimeout(hoverTimer);
+            clearTimeout(revertTimer);
+
       handlePlayPause(uid);
     };
 
