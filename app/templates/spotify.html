@@ -131,6 +131,11 @@ border-radius: 0.375rem;
             color: yellow;
         }
 
+        .favorite-btn.ignored {
+            color: red;
+        }
+
+
 .play-btn {
   background: white;
   color: #2b4638;
@@ -243,6 +248,10 @@ border-radius: 0.375rem;
             font-style: italic;
         }
 
+
+.spotify-card.ignored.hide {
+  display:none;
+}
 </style>
 <br>
 {% if alert %}
@@ -270,12 +279,33 @@ border-radius: 0.375rem;
     <div id="favoritesContainer"></div>
      <p id="fav_text" class="empty-message">No favorites yet. Star someone to add it here.</p>
   </div>
-      <h2 class="section-title">Jams</h2>
+      <h2 class="section-title">Jams</h2> <button id="toggle-btn">Show Ignored Users</button>
     <div id="cardsContainer"></div>
     <p id="rest_text" class="empty-message">Seems everyone is asleep..</p>
 </div>
 <script>
+const toggleBtn = document.getElementById('toggle-btn');
+let showIgnored = false;
+
+toggleBtn.addEventListener('click', () => {
+  showIgnored = !showIgnored;
+   updateIngores()
+});
+
+function updateIngores(){
+  const ignoredElements = document.querySelectorAll('.spotify-card.ignored');
+   console.log(ignoredElements);
+     console.log(showIgnored);
+  ignoredElements.forEach(element => {
+    if (showIgnored) { element.classList.remove('hide'); }
+    else {element.classList.add('hide');}
+  });
+  toggleBtn.textContent = showIgnored ? 'Hide Ignored Users' : 'Show Ignored Users';
+}
+updateIngores();
+
 let favorites = JSON.parse(localStorage.getItem('spotifyFavorites')) || [];
+let ignores = JSON.parse(localStorage.getItem('ignored')) || [];
 
 const cardsContainer = document.getElementById('cardsContainer');
 const favContainer = document.getElementById('favoritesContainer');
@@ -470,9 +500,12 @@ function addCard(uid, item){
     card = document.createElement('div');
     card.className = 'spotify-card';
     card.setAttribute('data-uid', uid);
-
     const isFavorited = favorites.includes(uid);
+    const isIgnored = ignores.includes(uid);
 
+    if(isIgnored){
+      card.classList.add('ignored');
+    }
     card.innerHTML = `
       <a href="https://open.spotify.com/track/${track}" target="_blank"><img src="${cover}" class="cover" alt="Cover" /></a>
       <div class="info">
@@ -484,7 +517,7 @@ function addCard(uid, item){
         </div>
       </div>
                     <div class="actions">
-                        <button class="favorite-btn ${isFavorited ? 'favorited' : ''}">★</button>
+                        <button class="favorite-btn ${isFavorited ? 'favorited' : ''} ${isIgnored ? 'ignored' : ''}">★</button>
                         <button class="play-btn">▶</button>
                     </div>
     `;
@@ -520,8 +553,13 @@ if(!isFav){
                 toggleFavorite(uid, favoriteBtn);
             };
 
-   activeCards[uid] = { card, status: 'paused', track: track };
+            favoriteBtn.addEventListener('contextmenu', (event) => {
+                event.preventDefault();
+                toggleIgnore(uid,favoriteBtn);
+            });
 
+   activeCards[uid] = { card, status: 'paused', track: track };
+updateIngores(); 
 // updateFavoritesDisplay();
 }
 
@@ -552,6 +590,28 @@ if(!isFav){
             // Update favorites display
             // updateFavoritesDisplay();
         }
+
+        function toggleIgnore(uid, button) {
+            const index = ignores.indexOf(uid);
+            const card = activeCards[uid].card;
+
+            if (index === -1) {
+                // Add to ignored list
+                ignores.push(uid);
+                button.classList.add('ignored');
+                card.classList.add('ignored');
+            } else {
+                // Remove from ignored list
+                ignores.splice(index, 1);
+                button.classList.remove('ignored');
+                card.classList.remove('ignored');
+            }
+            updateIngores()
+            // Save to localStorage
+            localStorage.setItem('ignored', JSON.stringify(ignores));
+
+        }
+
 
         function updateFavoritesDisplay() {
             favoritesContainer.innerHTML = '';
