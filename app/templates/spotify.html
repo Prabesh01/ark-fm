@@ -398,10 +398,8 @@ try{
 delete activeCards[data.uid];
 card.remove();
 updateIngores();
-if(Object.keys(activeCards).length === 0) {
-rest_text.style.display="block";
-fav_text.style.display="block";
-}
+if (cardsContainer.innerHTML==""){rest_text.style.display="block";}
+if (favoritesContainer.innerHTML==""){fav_text.style.display="block";}
 }
 catch{}
 });
@@ -610,6 +608,7 @@ updateIngores();
                 button.classList.add('favorited');
                 favoritesContainer.appendChild(card);
                 fav_text.style.display="none";
+                 if (cardsContainer.innerHTML==""){rest_text.style.display="block";}
                 //card.remove();
             } else {
                 // Remove from favorites
@@ -617,6 +616,7 @@ updateIngores();
                 button.classList.remove('favorited');
 
                 cardsContainer.appendChild(card);
+                if (favoritesContainer.innerHTML==""){fav_text.style.display="block";}
             rest_text.style.display="none";
                 // card.remove()
             }
