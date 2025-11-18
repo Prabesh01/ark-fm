@@ -289,7 +289,7 @@ let showIgnored = false;
 
 toggleBtn.addEventListener('click', () => {
   showIgnored = !showIgnored;
-   updateIngores()
+   updateIngores();
 });
 
 function updateIngores(){
@@ -397,6 +397,7 @@ let card = document.querySelector(`.spotify-card[data-uid="${data.uid}"]`);
 try{ 
 delete activeCards[data.uid];
 card.remove();
+updateIngores();
 if(Object.keys(activeCards).length === 0) {
 rest_text.style.display="block";
 fav_text.style.display="block";
