@@ -251,7 +251,7 @@ border-radius: 0.375rem;
 {% if user %}
 <h1>Hi {{user}}</h1>
 {% else %}
-<h1><a href="https://accounts.spotify.com/authorize?client_id=bf1d72ef1ca54ea1843d29b74a5e7400&response_type=code&redirect_uri=https://ark.cote.ws/callback&scope=app-remote-control,user-modify-playback-state"><button id="authorize" class="sp-btn"><i class="fa fa-spotify" aria-hidden="true"></i>
+<h1><a href="https://accounts.spotify.com/authorize?client_id=bf1d72ef1ca54ea1843d29b74a5e7400&response_type=code&redirect_uri=https://ark.cote.ws/callback&scope=app-remote-control,user-modify-playback-state,playlist-modify-public,playlist-modify-private,playlist-read-private"><button id="authorize" class="sp-btn"><i class="fa fa-spotify" aria-hidden="true"></i>
                                                 Authorize on Spotify</button></h1>
 </a>
 {% endif %}
@@ -321,11 +321,16 @@ return;
 
   if (cardInfo.status === 'playing') {
     // If currently playing, pause it
-    cardInfo.status = 'paused';
-    btn.textContent = '▶'; // change icon to play
-    btn.classList.remove('playing');
-    socket.emit('stop_listen_along');
-    currentActiveUid = null;
+    if (btn.textContent == '⏸'){
+        cardInfo.status = 'paused';
+        btn.textContent = '▶';
+        btn.classList.remove('playing');
+        socket.emit('stop_listen_along');
+        currentActiveUid = null;
+    }else{
+        btn.textContent = '⏸';
+        socket.emit('add_to_playlist',{ track });
+    }
   } else {
     for (const otherUid in activeCards) {
       if (activeCards.hasOwnProperty(otherUid)) {
@@ -339,7 +344,7 @@ return;
       }
     }
     cardInfo.status = 'playing';
-    btn.textContent = '⏸'; // change icon to pause
+    btn.textContent = '+'; // change icon to pause
     btn.classList.add('playing');
     socket.emit('listen_along', { uid, track });
     currentActiveUid = uid;
@@ -351,6 +356,11 @@ const err = data.message;
 alert(err);
 stop_all();
 });
+
+socket.on('alert', (data) => {
+alert(data.message);
+});
+
 
 socket.on('sp_remove', (data) => {
 let card = document.querySelector(`.spotify-card[data-uid="${data.uid}"]`);
@@ -396,7 +406,43 @@ card.innerHTML = `
                 </div>
             `;
             const playBtn = card.querySelector('.play-btn');
+
+        let hoverTimer;
+        let revertTimer;
+
+        playBtn.addEventListener('mouseenter', () => {
+            if (playBtn.textContent!="+"){return;}
+            // Clear any existing timers when hover starts
+            clearTimeout(hoverTimer);
+            clearTimeout(revertTimer);
+
+            // Start timer to change to ⏸ after 3 seconds
+            hoverTimer = setTimeout(() => {
+                if (playBtn.textContent!="+"){return;}
+                playBtn.textContent = '⏸';
+
+                revertTimer = setTimeout(() => {
+                    playBtn.textContent = '+';
+                }, 3000);
+
+            }, 1200);
+        });
+
+        playBtn.addEventListener('mouseleave', () => {
+            return;
+            // Clear timers when mouse leaves and immediately revert to +
+            clearTimeout(hoverTimer);
+            clearTimeout(revertTimer);
+
+            if (playBtn.textContent=="▶"){return;}
+            playBtn.textContent = '+';
+        });
+
+
             playBtn.onclick = () => {
+            clearTimeout(hoverTimer);
+            clearTimeout(revertTimer);
+
                 handlePlayPause(uid);
             };
 radioContainer.appendChild(card);

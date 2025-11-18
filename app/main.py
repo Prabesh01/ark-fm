@@ -329,6 +329,38 @@ def stop_listen_along():
             sp_activities[la]['count']=la_cnt
     rr=requests.put("https://api.spotify.com/v1/me/player/pause",headers={"Authorization":"Bearer "+sp_token})
 
+@socketio.on('add_to_playlist')
+def add_to_playlist(data):
+    track = data.get('track','').strip()
+    sp_token = request.cookies.get('access_token')
+    user_id = request.cookies.get('user_id')
+
+    pl_name="ark - listen along"
+
+    if not sp_token or not user_id: return
+    headers={"Authorization":"Bearer "+sp_token}
+
+    the_pl=None
+    url="https://api.spotify.com/v1/me/playlists?limit=50"
+    while url:
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            emit('error', {"message":"Try again later!" })
+            return
+
+        for playlist in response.json().get("items", []):
+            if playlist["name"] == pl_name:
+                if playlist['owner']['id']==user_id:
+                    the_pl=playlist['id']
+                    break
+        if the_pl: break
+        url = data.get('next')
+
+    if not the_pl:
+        the_pl=requests.post(f"https://api.spotify.com/v1/users/{user_id}/playlists",headers = {"Authorization":"Bearer "+sp_token},json={"name":pl_name, "public": False}).json()['id']
+    requests.post(f"https://api.spotify.com/v1/playlists/{the_pl}/tracks",json={"uris":[f"spotify:track:{track}"]}, headers={"Authorization":"Bearer "+sp_token})
+    emit('alert', {"message":"Added to your playlist." })
+
 @socketio.on('listen_along')
 def listen_along(data):
     global listen_alongs, sp_activities
@@ -398,12 +430,13 @@ def sp_callback():
     r=requests.post("https://accounts.spotify.com/api/token",data={"grant_type":"authorization_code","code":code,"redirect_uri":"https://ark.cote.ws/callback","client_id":"bf1d72ef1ca54ea1843d29b74a5e7400","client_secret":"6936135d83ab49a2b988cbddf5dbefce"}).json()
     if not 'access_token' in r: return render_template('spotify.html',alert="Spotify Oauth Failed! Try again later.")
 
-    user=requests.get('https://api.spotify.com/v1/me',headers = {"Authorization":"Bearer "+r['access_token']}).json()['display_name']
+    user=requests.get('https://api.spotify.com/v1/me',headers = {"Authorization":"Bearer "+r['access_token']}).json()
     html_content = redirect('/spotify')
     resp = make_response(html_content)
 
     resp.set_cookie('refresh_token', r['refresh_token'], path='/', httponly=True, samesite='Lax')
     resp.set_cookie('access_token', r['access_token'], path='/', httponly=True, samesite='Lax')
+    resp.set_cookie('user_id', user['id'], path='/', httponly=True, samesite='Lax')
 
     return resp
 
