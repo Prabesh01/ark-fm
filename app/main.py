@@ -258,16 +258,6 @@ sp_activities={}
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    global listen_alongs, sp_activities
-    sp_token = request.cookies.get('access_token')
-    if sp_token:
-        for la in listen_alongs:
-            if sp_token in listen_alongs[la]:
-                listen_alongs[la].remove(sp_token)
-                la_cnt=len(listen_alongs[la])
-                socketio.emit('count_update', {"uid":la,"count":la_cnt} , room='spotify')
-                sp_activities[la]['count']=la_cnt
-
     global chat_users
     if 'user' in session:
         user = session['user']
@@ -363,6 +353,7 @@ def listen_along(data):
 
 @app.get('/activity')
 def sp_activity():
+    global listen_alongs,sp_activities
     track = request.args.get('track')
     uid = request.args.get('uid')
     user = request.args.get('user')
@@ -381,6 +372,11 @@ def sp_activity():
     if uid in listen_alongs:
         for listeners in listen_alongs[uid]:
             rr=requests.put("https://api.spotify.com/v1/me/player/play",headers={"Authorization":"Bearer "+listeners},json={"uris":["spotify:track:"+track]})
+            if rr.status_code!=200:
+                listen_alongs[uid].remove(listeners)
+                la_cnt=len(listen_alongs[uid])
+                socketio.emit('count_update', {"uid":uid,"count":la_cnt} , room='spotify')
+                sp_activities[uid]['count']=la_cnt
             print(rr.text)
 
     return 'OK'
