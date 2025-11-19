@@ -404,7 +404,7 @@ def sp_activity():
     if uid in listen_alongs:
         for listeners in listen_alongs[uid]:
             rr=requests.put("https://api.spotify.com/v1/me/player/play",headers={"Authorization":"Bearer "+listeners},json={"uris":["spotify:track:"+track]})
-            if rr.status_code!=200:
+            if rr.status_code!=204:
                 listen_alongs[uid].remove(listeners)
                 la_cnt=len(listen_alongs[uid])
                 socketio.emit('count_update', {"uid":uid,"count":la_cnt} , room='spotify')
