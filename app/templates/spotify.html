@@ -332,11 +332,23 @@ function stop_all(){
 }
 
 socket.on('connect', () => {
+stop_all();
 socket.emit('hi_spotify', { });
 });
 socket.on('disconnect', (reason) => {
 stop_all();
 });
+socket.on('listening_to', (data) => {
+stop_all();
+const cardInfo = activeCards[data.uid];
+const card = cardInfo.card;
+const btn = card.querySelector('.play-btn');
+    cardInfo.status = 'playing';
+    btn.textContent = '+'; 
+    btn.classList.add('playing');
+    currentActiveUid = data.uid;
+});
+
 
 
 function handlePlayPause(uid) {
