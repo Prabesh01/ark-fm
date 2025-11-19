@@ -362,17 +362,8 @@ return;
         socket.emit('add_to_playlist',{ track });
     }
   } else {
-    for (const otherUid in activeCards) {
-      if (activeCards.hasOwnProperty(otherUid)) {
-        const otherCardInfo = activeCards[otherUid];
-        if (otherCardInfo.status === 'playing') {
-          otherCardInfo.status = 'paused';
-          const playBtn=otherCardInfo.card.querySelector('.play-btn');
-          playBtn.textContent = '▶';
-          playBtn.classList.remove('playing');
-        }
-      }
-    }
+    stop_all();
+
     cardInfo.status = 'playing';
     btn.textContent = '+'; // change icon to pause
     btn.classList.add('playing');
@@ -475,14 +466,15 @@ card.innerHTML = `
                 handlePlayPause(uid);
             };
 radioContainer.appendChild(card);
+activeCards[uid] = { card, status: 'paused', track: track };
 }else{
       card.querySelector('a').href = `https://open.spotify.com/track/${track}`;
       card.querySelector('.radio-title').textContent = title;
       card.querySelector('.radio-artist').textContent = artist;
       card.querySelector('.rname').textContent = uid;
       card.querySelector('.count').textContent = countSpanContent;
+activeCards[uid]['track']=track;
 }
-activeCards[uid] = { card, status: 'paused', track: track };
 }
 
 
@@ -541,6 +533,8 @@ if(!isFav){
       card.querySelector('.user-pic').src = profile;
       card.querySelector('.username').textContent = user;
       card.querySelector('.count').textContent = countSpanContent;
+      activeCards[uid]['track']= track;
+      return;
     }
     const playBtn = card.querySelector('.play-btn');
 
