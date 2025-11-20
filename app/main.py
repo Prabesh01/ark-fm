@@ -255,6 +255,7 @@ def handle_connect():
 
 listen_alongs = {} # {"saan":"prabesh_ko_token"}
 sp_activities={} # {"saaan_dc_id":{track:,user:,count:}}
+listening_to = {}
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -382,7 +383,7 @@ def add_to_playlist(data):
 
 @socketio.on('listen_along')
 def listen_along(data):
-    global listen_alongs, sp_activities
+    global listen_alongs, sp_activities, listening_to
     user_id = request.cookies.get('user_id',None)
 
     uid = data.get('uid', '').strip()
@@ -395,15 +396,30 @@ def listen_along(data):
             la_cnt=len(listen_alongs[la])
             socketio.emit('count_update', {"uid":la,"count":la_cnt} , room='spotify')
             sp_activities[la]['count']=la_cnt
+
+    sp_token=sp_rf_token(sp_refresh)
+
+    if sp_refresh in listening_to:
+        device = listening_to[sp_refresh]
+    else:
+        rr=requests.get("https://api.spotify.com/v1/me/player/devices",headers={"Authorization":"Bearer "+sp_token}).json()
+        if not 'devices' in rr or not rr['devices']:
+            emit('error', {"message":"No active spotify player detcted." })
+            return
+        device=rr['devices'][0]['id']
+        listening_to[sp_refresh]=device
+
+    rr=requests.put("https://api.spotify.com/v1/me/player/play?device_id="+device,headers={"Authorization":"Bearer "+sp_token},json={"uris":["spotify:track:"+track]})
+    if rr.status_code!=204:
+        del listening_to[sp_refresh]
+        emit('error', {"message":rr.json()['error']['message'] })
+        return
+
     if not uid in listen_alongs: listen_alongs[uid]=[]
     listen_alongs[uid].append(sp_refresh)
     la_cnt=len(listen_alongs[uid])
     socketio.emit('count_update', {"uid":uid,"count":la_cnt} , room='spotify')
     sp_activities[uid]['count']=la_cnt
-
-    sp_token=sp_rf_token(sp_refresh)
-    rr=requests.put("https://api.spotify.com/v1/me/player/play",headers={"Authorization":"Bearer "+sp_token},json={"uris":["spotify:track:"+track]})
-    if rr.status_code!=204: emit('error', {"message":rr.json()['error']['message'] })
 
 @app.get('/activity')
 def sp_activity():
@@ -427,10 +443,11 @@ def sp_activity():
         for listener_refresh in listen_alongs[uid]:
             listener_token=sp_rf_token(listener_refresh)
             if listener_token:
-                rr=requests.put("https://api.spotify.com/v1/me/player/play",headers={"Authorization":"Bearer "+listener_token},json={"uris":["spotify:track:"+track]})
+                rr=requests.put("https://api.spotify.com/v1/me/player/play?device_id="+listening_to[listener_refresh],headers={"Authorization":"Bearer "+listener_token},json={"uris":["spotify:track:"+track]})
                 print(rr.text)
                 if rr.status_code==204:
                     continue
+            del listening_to[listener_refresh]
             listen_alongs[uid].remove(listener_refresh)
             la_cnt=len(listen_alongs[uid])
             socketio.emit('count_update', {"uid":uid,"count":la_cnt} , room='spotify')
