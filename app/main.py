@@ -445,7 +445,7 @@ def sp_activity_rm():
     sp_activities.pop(uid,None)
     socketio.emit('sp_remove', {"uid":uid} , room='spotify')
 
-    listen_alongs.pop(uid,None)
+    # listen_alongs.pop(uid,None)
 
     return 'OK'
 
