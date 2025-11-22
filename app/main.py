@@ -4,7 +4,7 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 import random
 import string
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import os
 import threading
 base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -70,8 +70,6 @@ def get_listener_count():
    
     socketio.emit('listener_update', {"total_users":last_count } , room='chat_room')
     
-import datetime
-from datetime import timedelta
 np_offset = timedelta(hours=5, minutes=45)
 
 days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
@@ -116,7 +114,7 @@ def lyrics_search(song,artists):
     socketio.emit('new_message', {"username":"lyrics_bot", "message":last_lyrics } , room='chat_room')
 
 def fetch_program_info():
-    npt = datetime.datetime.now(timezone.utc) + np_offset
+    npt = datetime.now(timezone.utc) + np_offset
 
     weekday = npt.weekday()
     tday = days[weekday]
@@ -405,7 +403,7 @@ def listen_along(data):
     sp_refresh = request.cookies.get('refresh_token')
 
     if not user_id in sp_users: sp_users[user_id]={}
-    sp_users[user_id]=sp_refresh
+    sp_users[user_id]={"token":sp_refresh}
 
     if not sp_refresh: return
     for la in listen_alongs:
@@ -428,6 +426,27 @@ def listen_along(data):
     sp_activities[uid]['count']=la_cnt
 
 
+@app.get('/activity_seek')
+def sp_activity_seek():
+    return 'meh'
+    uid = request.args.get('uid')
+    seek = int(request.args.get('seek'))
+    if not uid in sp_activities: return 'UID khoi'
+
+    position_ms = int((datetime.now(timezone.utc).timestamp() - sp_activities[uid]['start'])*1000)
+    position_ms+=seek
+
+    if uid in listen_alongs:
+        for listener_spid in listen_alongs[uid]:
+            print(sp_users)
+            listener_refresh = sp_users[listener_spid]['token']
+            print(sp_users)
+            listener_token=sp_rf_token(listener_refresh)
+            if listener_token:
+                rr=requests.put("https://api.spotify.com/v1/me/player/seek",headers={"Authorization":"Bearer "+listener_token},params={"position_ms":position_ms})
+                print(rr.text)
+    return 'OK'
+
 @app.get('/activity')
 def sp_activity():
     global listen_alongs,sp_activities, sp_users
@@ -438,10 +457,13 @@ def sp_activity():
     title = request.args.get('title')
     artist=request.args.get('artist')
     cover=request.args.get('cover')
+    start=request.args.get('start')
+    if start: start = datetime.fromisoformat(start.replace(' 00:00', '+00:00')).timestamp()
+    else: start=datetime.now(timezone.utc).timestamp()
 
     count=0
     if uid in sp_activities: count = sp_activities[uid]['count']
-    sp_data={"track":track,"user":user,"profile":profile,"title":title,"artist": artist,"cover":cover,"count":count}
+    sp_data={"track":track,"user":user,"profile":profile,"title":title,"artist": artist,"cover":cover,"count":count,"start":start}
     sp_activities[uid]=sp_data
     sp_data['uid']=uid
     socketio.emit('sp_update', sp_data , room='spotify')
