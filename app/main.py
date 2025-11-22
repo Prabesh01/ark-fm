@@ -253,8 +253,9 @@ def handle_connect():
 
         emit('listener_update', {"total_users":last_count })
 
-listen_alongs = {} # {"saan":"prabesh_ko_token"}
+listen_alongs = {} # {"saan":"prabesh_sp_uid"}
 sp_activities={} # {"saaan_dc_id":{track:,user:,count:}}
+sp_users = {} # {prabesh_sp_uid:{"token":}}
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -302,46 +303,60 @@ def sp_home():
         r=requests.get('https://api.spotify.com/v1/me',headers = {"Authorization":"Bearer "+sp_token})
         if r.status_code==200:
             user=r.json()['display_name']
+            sp_uid=r.json()['id']
         elif sp_refresh:
             sp_token=sp_rf_token(sp_refresh)
             if sp_token:
-                user=requests.get('https://api.spotify.com/v1/me',headers = {"Authorization":"Bearer "+sp_token}).json()['display_name']
+                r=requests.get('https://api.spotify.com/v1/me',headers = {"Authorization":"Bearer "+sp_token}).json()
+                user=r['display_name']
+                sp_uid=r['id']
+
     html_content = render_template('spotify.html', user=user)
     resp = make_response(html_content)
     if not user:
         resp.delete_cookie('refresh_token', path='/')
         resp.delete_cookie('access_token', path='/')
+        resp.delete_cookie('user_id', path='/')
     else:
+        global sp_users
+        sp_users[sp_uid]={'token':sp_refresh}
         resp.set_cookie('refresh_token', sp_refresh, path='/', httponly=True, samesite='Lax')
         resp.set_cookie('access_token', sp_token, path='/', httponly=True, samesite='Lax')
+        resp.set_cookie('user_id', sp_uid, path='/', httponly=True, samesite='Lax')
     return resp
 
 @socketio.on('hi_spotify')
 def handle_spotify_con(data):
-    sp_refresh = request.cookies.get('refresh_token','')
+    sp_uid = request.cookies.get('user_id','')
     leave_room('chat_room')
     socketio.emit('sp_list', sp_activities)
     join_room('spotify')
 
     for uid in listen_alongs:
         for listener_refresh in listen_alongs[uid]:
-            if listener_refresh==sp_refresh:
+            if listener_refresh==sp_uid:
                 socketio.emit('listening_to', {'uid':uid})
                 return
 
 @socketio.on('stop_listen_along')
 def stop_listen_along():
     global sp_activities
-    sp_refresh = request.cookies.get('refresh_token')
     sp_token = request.cookies.get('access_token')
-    if not sp_refresh: return
+    sp_uid = request.cookies.get('user_id')
+    if not sp_token: return
+
+    rr=requests.put("https://api.spotify.com/v1/me/player/pause",headers={"Authorization":"Bearer "+sp_token})
+    if rr.status_code!=200:
+        emit('error', {"message":rr.json()['error']['message'] })
+        return
+
     for la in listen_alongs:
-        if sp_refresh in listen_alongs[la]:
-            listen_alongs[la].remove(sp_refresh)
+        if sp_uid in listen_alongs[la]:
+            listen_alongs[la].remove(sp_uid)
             la_cnt=len(listen_alongs[la])
             socketio.emit('count_update', {"uid":la,"count":la_cnt} , room='spotify')
             sp_activities[la]['count']=la_cnt
-    rr=requests.put("https://api.spotify.com/v1/me/player/pause",headers={"Authorization":"Bearer "+sp_token})
+    del sp_users[sp_uid]
 
 @socketio.on('add_to_playlist')
 def add_to_playlist(data):
@@ -382,32 +397,40 @@ def add_to_playlist(data):
 
 @socketio.on('listen_along')
 def listen_along(data):
-    global listen_alongs, sp_activities
-    user_id = request.cookies.get('user_id',None)
+    global listen_alongs, sp_activities, sp_users
+    user_id = request.cookies.get('user_id')
 
     uid = data.get('uid', '').strip()
     track = data.get('track','').strip()
     sp_refresh = request.cookies.get('refresh_token')
+
+    if not user_id in sp_users: sp_users[user_id]={}
+    sp_users[user_id]=sp_refresh
+
     if not sp_refresh: return
     for la in listen_alongs:
-        if sp_refresh in listen_alongs[la]:
-            listen_alongs[la].remove(sp_refresh)
+        if user_id in listen_alongs[la]:
+            listen_alongs[la].remove(user_id)
             la_cnt=len(listen_alongs[la])
             socketio.emit('count_update', {"uid":la,"count":la_cnt} , room='spotify')
             sp_activities[la]['count']=la_cnt
+
+    sp_token=sp_rf_token(sp_refresh)
+    rr=requests.put("https://api.spotify.com/v1/me/player/play",headers={"Authorization":"Bearer "+sp_token},json={"uris":["spotify:track:"+track]})
+    if rr.status_code!=204:
+        emit('error', {"message":rr.json()['error']['message'] })
+        return
+
     if not uid in listen_alongs: listen_alongs[uid]=[]
-    listen_alongs[uid].append(sp_refresh)
+    listen_alongs[uid].append(user_id)
     la_cnt=len(listen_alongs[uid])
     socketio.emit('count_update', {"uid":uid,"count":la_cnt} , room='spotify')
     sp_activities[uid]['count']=la_cnt
 
-    sp_token=sp_rf_token(sp_refresh)
-    rr=requests.put("https://api.spotify.com/v1/me/player/play",headers={"Authorization":"Bearer "+sp_token},json={"uris":["spotify:track:"+track]})
-    if rr.status_code!=204: emit('error', {"message":rr.json()['error']['message'] })
 
 @app.get('/activity')
 def sp_activity():
-    global listen_alongs,sp_activities
+    global listen_alongs,sp_activities, sp_users
     track = request.args.get('track')
     uid = request.args.get('uid')
     user = request.args.get('user')
@@ -424,14 +447,16 @@ def sp_activity():
     socketio.emit('sp_update', sp_data , room='spotify')
 
     if uid in listen_alongs:
-        for listener_refresh in listen_alongs[uid]:
+        for listener_spid in listen_alongs[uid]:
+            listener_refresh = sp_users[listener_spid]['token']
             listener_token=sp_rf_token(listener_refresh)
             if listener_token:
                 rr=requests.put("https://api.spotify.com/v1/me/player/play",headers={"Authorization":"Bearer "+listener_token},json={"uris":["spotify:track:"+track]})
                 print(rr.text)
                 if rr.status_code==204:
                     continue
-            listen_alongs[uid].remove(listener_refresh)
+            del sp_users[listener_spid]                    
+            listen_alongs[uid].remove(listener_spid)
             la_cnt=len(listen_alongs[uid])
             socketio.emit('count_update', {"uid":uid,"count":la_cnt} , room='spotify')
             sp_activities[uid]['count']=la_cnt
@@ -451,6 +476,7 @@ def sp_activity_rm():
 
 @app.get('/callback')
 def sp_callback():
+    global sp_users
     code = request.args.get('code')
     r=requests.post("https://accounts.spotify.com/api/token",data={"grant_type":"authorization_code","code":code,"redirect_uri":"https://ark.cote.ws/callback","client_id":"bf1d72ef1ca54ea1843d29b74a5e7400","client_secret":"6936135d83ab49a2b988cbddf5dbefce"}).json()
     if not 'access_token' in r: return render_template('spotify.html',alert="Spotify Oauth Failed! Try again later.")
@@ -462,7 +488,7 @@ def sp_callback():
     resp.set_cookie('refresh_token', r['refresh_token'], path='/', httponly=True, samesite='Lax')
     resp.set_cookie('access_token', r['access_token'], path='/', httponly=True, samesite='Lax')
     resp.set_cookie('user_id', user['id'], path='/', httponly=True, samesite='Lax')
-
+    sp_users[user['id']]={"token":r['refresh_token']}
     return resp
 
 @app.get('/playlist')
