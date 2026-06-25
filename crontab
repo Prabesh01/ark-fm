@@ -1,0 +1,1 @@
+* * * * * export PATH=/usr/local/bin:/usr/bin:/bin; cd / && ./radio.sh >> ./radio.log 2>&1
