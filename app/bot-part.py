@@ -11,6 +11,8 @@ BASE_DIR = Path(__file__).resolve().parent
 ENV_FILE = BASE_DIR / '.env'
 load_dotenv(ENV_FILE)
 
+domain=os.getenv("domain")
+
 from discord import Spotify
 intents = discord.Intents.default()
 intents.presences = True
@@ -40,12 +42,12 @@ async def on_presence_update(before, after):
         if was.track_id==found.track_id:
             seek=1
             # seek=int((was.start - found.start).total_seconds()*1000)
-            # requests.get(f"https://ark.cote.ws/activity_seek?&uid={after.id}&seek={seek}")
+            # requests.get(f"https://{{domain}}/activity_seek?&uid={after.id}&seek={seek}")
 
     if found and not seek:
         print(f"{found.name} is now listening to {found.title} by {found.artist}")
-        r=requests.get(f"https://ark.cote.ws/activity?track={found.track_id}&uid={after.id}&user={after.global_name}&profile={after.avatar}&title={found.title}&artist={found.artist}&cover={found.album_cover_url}&start={found.start}")
+        r=requests.get(f"https://{{domain}}/activity?track={found.track_id}&uid={after.id}&user={after.global_name}&profile={after.avatar}&title={found.title}&artist={found.artist}&cover={found.album_cover_url}&start={found.start}")
 
     if was and not found:
-        requests.get(f"https://ark.cote.ws/activity_rm?uid={after.id}")
+        requests.get(f"https://{{domain}}/activity_rm?uid={after.id}")
 

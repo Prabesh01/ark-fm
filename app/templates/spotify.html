@@ -260,7 +260,7 @@ border-radius: 0.375rem;
 {% if user %}
 <h1>Hi {{user}}</h1>
 {% else %}
-<h1><a href="https://accounts.spotify.com/authorize?client_id=bf1d72ef1ca54ea1843d29b74a5e7400&response_type=code&redirect_uri=https://ark.cote.ws/callback&scope=app-remote-control,user-modify-playback-state,playlist-modify-public,playlist-modify-private,playlist-read-private"><button id="authorize" class="sp-btn"><i class="fa fa-spotify" aria-hidden="true"></i>
+<h1><a href="https://accounts.spotify.com/authorize?client_id={{spotify_client_id}}&response_type=code&redirect_uri=https://{{domain}}/callback&scope=app-remote-control,user-modify-playback-state,playlist-modify-public,playlist-modify-private,playlist-read-private"><button id="authorize" class="sp-btn"><i class="fa fa-spotify" aria-hidden="true"></i>
                                                 Authorize on Spotify</button></h1>
 </a>
 {% endif %}

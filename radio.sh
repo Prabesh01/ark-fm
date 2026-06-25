@@ -86,10 +86,11 @@ then
 fi
 
 kill -9 $(pgrep -fl 'ffmpeg -re -i' | sed 's/ .*//')
+ICECAST_STREAM_URL="icecast://source:$ZENO_ICECAST_PASSWORD@link.zeno.fm:80/$ZENO_ICECAST_MOUNT"
 if [[ "$show_id" == "car" ]] || [[ "$show_id" == "car" ]]
 then
     echo "video->audio"
-    nohup ffmpeg -re -i "$show_stream" -f adts icecast://source:6GeTEy67@link.zeno.fm:80/bfeoaqiomuquv > "$LOG_FILE"  2>&1 &
+    nohup ffmpeg -re -i "$show_stream" -f adts "$ICECAST_STREAM_URL" > "$LOG_FILE"  2>&1 &
 else
-    nohup ffmpeg -re -i "${show_stream}" -vn -acodec aac -content_type audio/aac -f adts icecast://source:6GeTEy67@link.zeno.fm:80/bfeoaqiomuquv > "${LOG_FILE}"  2>&1 &
+    nohup ffmpeg -re -i "${show_stream}" -vn -acodec aac -content_type audio/aac -f adts "$ICECAST_STREAM_URL" > "${LOG_FILE}"  2>&1 &
 fi

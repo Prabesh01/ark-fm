@@ -995,7 +995,7 @@ color: #aaa;
     <section class="footer">
 <a target="_blank" href="https://www.facebook.com/medisno/"><i class="fa fa-facebook-f"></i></a>
 <a target="_blank" href="https://www.youtube.com/@medisno"><i class="fa fa-youtube"></i></a>
-<a target="_blank" href="mailto:arkfm@cote.ws"><i class="fa fa-envelope"></i></a>
+<a target="_blank" href="mailto:arkfm@{{mail_domain}}"><i class="fa fa-envelope"></i></a>
 <p style="color:white">Medisno Solutions<br>Pokhara, Nepal<br></p><br>
     </section>
     <audio style="display:none;" id="audioElement" controls>
@@ -1123,7 +1123,7 @@ audio.addEventListener('pause', () => {
 const program = document.getElementById('program');
 const title = document.getElementById('title');
 
-    const eventSource = new EventSource('https://api.zeno.fm/mounts/metadata/subscribe/bfeoaqiomuquv');
+    const eventSource = new EventSource('https://api.zeno.fm/mounts/metadata/subscribe/{{ZENO_ICECAST_MOUNT}}');
     eventSource.addEventListener('message', function(event) {
 let streamTitle = '';
         try {

@@ -1,3 +1,5 @@
+from gevent import monkey
+monkey.patch_all()
 
 from flask import Flask, render_template, request, jsonify, session, make_response, redirect
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -6,13 +8,25 @@ import string
 import secrets
 from datetime import datetime, timezone, timedelta
 import os
+from dotenv import load_dotenv
 import threading
+import urllib.parse
+
 base_dir = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(os.path.dirname(base_dir), '.env'))
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 import atexit
 import requests
+
+from zeno_fm_auth import get_zeno_token
+
+spotify_client_id=os.getenv("spotify_client_id")
+spotify_client_secret=os.getenv("spotify_client_secret")
+ZENO_ICECAST_MOUNT=os.getenv("ZENO_ICECAST_MOUNT")
+ZENO_ICECAST_PASSWORD=os.getenv("ZENO_ICECAST_PASSWORD")
+domain=os.getenv("domain")
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secrets.token_hex(16)
@@ -20,14 +34,11 @@ app.config['SESSION_TYPE'] = 'filesystem'
 
 from flask_session import Session
 Session(app)
-socketio = SocketIO(app, cors_allowed_origins="*", manage_session=False, async_mode='eventlet')
+socketio = SocketIO(app, cors_allowed_origins="*", manage_session=False, async_mode='gevent')
 
 scheduler = BackgroundScheduler()
 scheduler.start()
 atexit.register(lambda: scheduler.shutdown())
-
-import eventlet
-eventlet.monkey_patch()
 
 chat_users = {}
 pinned_message = 'Send "/as" to toggle autoscroll on new user messages.'
@@ -42,29 +53,17 @@ from utils import info_fetcher
 
 import json
 sched = json.load(open(base_dir+'/static/json/schedule.json'))
-creds = json.load(open(base_dir+'/creds.json'))
-
-def get_zeno_token():
-    global creds    
-    rr = requests.post("https://tools.zeno.fm/auth/realms/broadcasters/protocol/openid-connect/token",data={"grant_type":"refresh_token","refresh_token":creds['refresh_token'],"client_id":"zeno-tools"})
-
-    if not 'access_token' in rr.json(): return None
-    with open(base_dir+'/creds.json','w') as f:
-        json.dump(rr.json(),f)
-    return rr.json()['access_token']
 
 def get_listener_count():
     global last_count
-    token = creds['access_token']
-    test_token = requests.get("https://stream-tools.zenomedia.com/users/me",headers={"Authorization": "Bearer "+token})
-    if test_token.json() == {"message":"Not authorized"}: token = get_zeno_token()
+    token = get_zeno_token()
 
     if not token:
         last_count='N/A'
-
-    rr = requests.get("https://stream-tools.zenomedia.com/stations/bfeoaqiomuquv/stats/live?include_outputs=true",headers={"Authorization": "Bearer "+token}).json()
-    totalcnt=0
-    for d in rr['data']: totalcnt += d['uniqueListeners']
+    else:
+        rr = requests.get(f"https://stream-tools.zenomedia.com/stations/{ZENO_ICECAST_MOUNT}/stats/live?include_outputs=true",headers={"Authorization": "Bearer "+token}).json()
+        totalcnt=0
+        for d in rr['data']: totalcnt += d['uniqueListeners']
     if last_count==totalcnt: return
     last_count=totalcnt
    
@@ -75,8 +74,8 @@ np_offset = timedelta(hours=5, minutes=45)
 days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
 
 def update_icecast_metadata(prog, title):
-    url="http://link.zeno.fm:80/admin/metadata?mount=/bfeoaqiomuquv&mode=updinfo&song="
-    requests.get(f"{url}{title} [{prog}]", auth=("source", "6GeTEy67"))
+    url=f"http://link.zeno.fm:80/admin/metadata?mount=/{ZENO_ICECAST_MOUNT}&mode=updinfo&song="
+    requests.get(f"{url}{title} [{prog}]", auth=("source", ZENO_ICECAST_PASSWORD))
 
 def convert_to_plain_lrc(lrc):
     plain_lyrics = ""
@@ -98,7 +97,7 @@ def get_lyrics(r):
 def lyrics_search(song,artists):
     global last_lyrics
     params=f"?track_name={song}&artist_name={artists}"
-    headers={"User-Agent": "ARK FM (https://ark.cote.ws/)"}
+    headers={"User-Agent": f"ARK FM (https://domain)"}
     r=requests.get("https://lrclib.net/api/search"+params,headers=headers).json()
 
     if r!=[]: r=r[0]
@@ -198,7 +197,9 @@ def index():
     if 'user' not in session:
         session['user'] = generate_username()
     
-    return render_template('index.html', 
+    return render_template('index.html',
+                         mail_domain='.'.join(domain.split('.', 1)[1:]),
+                         ZENO_ICECAST_MOUNT=ZENO_ICECAST_MOUNT, 
                          username=session['user'],
                          pinned_message=pinned_message, total_users=len(chat_users))
 
@@ -286,7 +287,7 @@ def handle_send_message(data):
     emit('new_message', message_data, room='chat_room')
 
 def sp_rf_token(sp_refresh):
-    r=requests.post("https://accounts.spotify.com/api/token",data={"grant_type":"refresh_token","refresh_token":sp_refresh},auth=("bf1d72ef1ca54ea1843d29b74a5e7400","6936135d83ab49a2b988cbddf5dbefce"))
+    r=requests.post("https://accounts.spotify.com/api/token",data={"grant_type":"refresh_token","refresh_token":sp_refresh},auth=(spotify_client_id,spotify_client_secret))
     if r.status_code==200:
         sp_token=r.json()['access_token']
     else: sp_token=None
@@ -309,7 +310,7 @@ def sp_home():
                 user=r['display_name']
                 sp_uid=r['id']
 
-    html_content = render_template('spotify.html', user=user)
+    html_content = render_template('spotify.html', user=user, spotify_client_id=spotify_client_id, domain=domain)
     resp = make_response(html_content)
     if not user:
         resp.delete_cookie('refresh_token', path='/')
@@ -500,7 +501,7 @@ def sp_activity_rm():
 def sp_callback():
     global sp_users
     code = request.args.get('code')
-    r=requests.post("https://accounts.spotify.com/api/token",data={"grant_type":"authorization_code","code":code,"redirect_uri":"https://ark.cote.ws/callback","client_id":"bf1d72ef1ca54ea1843d29b74a5e7400","client_secret":"6936135d83ab49a2b988cbddf5dbefce"}).json()
+    r=requests.post("https://accounts.spotify.com/api/token",data={"grant_type":"authorization_code","code":code,"redirect_uri":f"https://{domain}/callback","client_id":spotify_client_id,"client_secret":spotify_client_secret}).json()
     if not 'access_token' in r: return render_template('spotify.html',alert="Spotify Oauth Failed! Try again later.")
 
     user=requests.get('https://api.spotify.com/v1/me',headers = {"Authorization":"Bearer "+r['access_token']}).json()
