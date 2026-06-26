@@ -5,6 +5,14 @@ JSON_FILE="$BASE_DIR/app/static/json/schedule.json"
 LAST_FILE="$BASE_DIR/p"
 LOG_FILE="$BASE_DIR/radio.log"
 
+ONAIR_FILE="$BASE_DIR/app/onair"
+if [ -e "$ONAIR_FILE" ]; then
+    echo "no automated stream during self-stream is on air"
+    kill -9 $(pgrep -fl 'ffmpeg -re -i' | sed 's/ .*//')
+    rm -f "$LOG_FILE"
+    exit;
+fi
+
 export TZ="Asia/Kathmandu"
 
 days=("SUN" "MON" "TUE" "WED" "THU" "FRI" "SAT")

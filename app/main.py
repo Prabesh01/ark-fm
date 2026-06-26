@@ -42,7 +42,7 @@ atexit.register(lambda: scheduler.shutdown())
 
 chat_users = {}
 pinned_message = 'Send "/as" to toggle autoscroll on new user messages.'
-ADMIN_PASSWORD = "adarkmin"  
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 last_title=""
 last_program=""
 last_lyrics=""
@@ -53,6 +53,10 @@ from utils import info_fetcher
 
 import json
 sched = json.load(open(base_dir+'/static/json/schedule.json'))
+
+is_onair=False
+onair_file=base_dir+'/onair'
+if os.path.exists(onair_file): is_onair=True
 
 def get_listener_count():
     global last_count
@@ -168,6 +172,7 @@ def fetch_program_info():
             socketio.emit('new_message', {"username":"lyrics_bot", "message":"Skipped lyrics search" } , room='chat_room')
 
 def call_fetch_program_info():
+    if is_onair: return
     socketio.start_background_task(fetch_program_info)
 
 call_fetch_program_info()
@@ -211,16 +216,30 @@ def admin():
 
     session['user'] = "Admin"
 
-    if not 'message' in request.args: return "Session set"
+    if not 'message' in request.args and not 'onair_title' in request.args: return "Session set"
 
-    global pinned_message
-    pinned_message = request.args.get('message')
+    if 'message' in request.args:
+        global pinned_message
+        pinned_message = request.args.get('message')
     
-    socketio.emit('pinned_message', {
-        'message': pinned_message
-    }, room='chat_room')
+        socketio.emit('pinned_message', {
+            'message': pinned_message
+        }, room='chat_room')
 
-    return "Pinned!"
+        return "Message Pinned!"
+
+    if 'onair_title' in request.args:
+        global is_onair
+        onair_title = request.args.get('onair_title').strip()
+        if not onair_title:
+            is_onair=False
+            os.remove(onair_file)
+            return "Resuming Automted stream."
+        else:
+            is_onair=True
+            with open(onair_file,'w') as f: pass
+            update_icecast_metadata("ON AIR",onair_title)
+            return "Stopped automated stream. Good luck with the self-stream"
 
 @socketio.on('connect')
 def handle_connect():

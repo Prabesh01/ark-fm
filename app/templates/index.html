@@ -56,7 +56,6 @@ Design idea taken from:
         margin-left: auto;
 }
 
-}
 
 /*
 .current-show .show-slot {
@@ -65,11 +64,16 @@ Design idea taken from:
     font-weight: bold;
 }
 */
-.time small.live-tag {
+
+.current-show:not(.isnt-live) .divider {
+    background: #ffea00 !important;
+}
+
+.current-show:not(.isnt-live) .time small {
     position: relative;
 }
 
-.time small.live-tag:before {
+.current-show:not(.isnt-live) .time small:before {
     content: "live";
     display: block;
     text-transform: uppercase;
@@ -84,7 +88,6 @@ Design idea taken from:
     font-weight: bold;
     line-height: 1;
 }
-
     .wrap{max-width:1280px;margin:0 auto;}
 
     header{
@@ -1131,6 +1134,13 @@ const data = JSON.parse(event.data);
 if (data.streamTitle) {
 streamTitle=data.streamTitle.slice(0, data.streamTitle.lastIndexOf('[')).trim();
 title.innerText=streamTitle;
+let streamProgram=data.streamTitle.slice(data.streamTitle.lastIndexOf('[')+1,-1).trim();
+program.innerText=streamProgram;
+if (streamProgram=="On Air"){
+document.querySelector('.current-show').classList.add('isnt-live');
+}else{
+document.querySelector('.current-show').classList.remove('isnt-live');
+}
 }else{
 return;}
 } catch (error) {

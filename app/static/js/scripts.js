@@ -163,8 +163,6 @@ function highlightCurrentShow() {
         }
         if (!isToday){
         // Remove previous highlights
-        slot.querySelector('.divider').style.background="";
-        slot.querySelector('.time small').classList.remove('live-tag');
         slot.classList.remove('current-show');
         // const parent = slot.closest('.day_Sunday, .day_Monday, .day_Tuesday, .day_Wednesday, .day_Thursday, .day_Friday, .day_Saturday');
         // if (parent) parent.classList.remove('current-show');
@@ -172,9 +170,6 @@ function highlightCurrentShow() {
     });
     // Highlight current show
     if (currentShow && isToday && !currentShow.classList.contains('current-show')) {
-        // Remove previous highlights
-        activePanel.querySelectorAll('.current-show').forEach((e)=>{e.querySelector('.divider').style.background="";e.querySelector('.time small').classList.remove('live-tag');e.classList.remove('current-show')})
-
         srcrl.setAttribute('data-url', currentShow.getAttribute('data-src'));
 
         imgrl = currentShow.getAttribute('data-img');
@@ -210,21 +205,6 @@ if ('mediaSession' in navigator) {
         if (currentShowElement) {
             currentShowElement.classList.add('current-show');
         }
-        
-        // Change divider color and add live tag
-        const divider = currentShow.querySelector('.divider');
-        if (divider) {
-            divider.style.background = '#ffea00';
-        }
-        
-        const timeSmall = currentShow.querySelector('.time small');
-        if (timeSmall) {
-            timeSmall.classList.add('live-tag');
-        }
-            setTimeout(function() {
-                highlightCurrentShow();
-            }, 20000);
-
     }
     
     return currentShowElement;
