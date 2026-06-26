@@ -778,15 +778,42 @@ color: #aaa;
     flex-direction: column;
 }
 
+/* Live Lyrics Updates */
 .lyric-text {
     font-size: 18px;
     font-weight: bold;
     color: #fff;
     text-align: center;
-    margin-bottom: 10px;
     min-height: 28px;
     text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    transition: all 0.3s ease;
 }
+
+.lyric-active {
+    color: #1DB954; /* Spotify green highlight */
+    transform: scale(1.05);
+    margin: 8px 0;
+}
+
+.lyric-dim {
+    font-size: 14px;
+    color: #888;
+    opacity: 0.7;
+    margin: 4px 0;
+}
+
+.plain-lyrics-scroll {
+    max-height: 120px;
+    overflow-y: auto;
+    text-align: center;
+    color: #ccc;
+    font-size: 15px;
+    line-height: 1.6;
+    padding: 10px 5px;
+    /* Hide scrollbar for cleaner look */
+    scrollbar-width: none; 
+}
+.plain-lyrics-scroll::-webkit-scrollbar { display: none; }
 
 .lyric-controls {
     display: flex;
@@ -1058,10 +1085,23 @@ color: #aaa;
         Your browser does not support the audio element.
     </audio>
 <div class="live-lyrics-container" id="lyricsContainer">
-    <div class="lyric-text" id="activeLyric">Waiting for lyrics...</div>
-    <div class="lyric-controls">
+    <div id="syncedView" style="display: none;">
+        <div class="lyric-text lyric-dim" id="lyricPrev"></div>
+        <div class="lyric-text lyric-active" id="lyricActive">Waiting for stream...</div>
+        <div class="lyric-text lyric-dim" id="lyricNext"></div>
+    </div>
+
+    <div id="plainView" class="plain-lyrics-scroll" style="display: none;">
+        <div id="plainLyricsContent"></div>
+    </div>
+
+    <div id="emptyView" class="lyric-text lyric-dim">
+        --
+    </div>
+
+    <div class="lyric-controls" id="lyricControls">
         <button class="sync-btn" id="syncMinus" title="Delay lyrics">-</button>
-        <span id="syncStatus">Sync: 0.0s</span>
+        <span id="syncStatus">Sync: -5.0s</span>
         <button class="sync-btn" id="syncPlus" title="Advance lyrics">+</button>
     </div>
 </div>
@@ -1196,8 +1236,10 @@ streamTitle=data.streamTitle.slice(0, data.streamTitle.lastIndexOf('[')).trim();
 title.innerText=streamTitle;
 
 songStartTime = Date.now();
-    syncOffset = -5.0; // Default buffer: assume stream is 5 seconds behind server
-    document.getElementById('syncStatus').innerText = `Sync: -5.0s`;
+        syncOffset = -5.0; // Reset offset to default
+pauseTimestamp = 0;
+        document.getElementById('syncStatus').innerText = `Sync: -5.0s`;
+        setLyricsUI('none'); // Set to -- until backend fetches the new lyrics
 
 let streamProgram=data.streamTitle.slice(data.streamTitle.lastIndexOf('[')+1,-1).trim();
 program.innerText=streamProgram;
@@ -1350,15 +1392,33 @@ if(isOwn){
 
             const socket = io({reconnection: true,reconnectionAttempts: Infinity,reconnectionDelay: 1000,reconnectionDelayMax: 5000,timeout: 20000});
 
-// --- SYNCED LYRICS ENGINE ---
+// --- LYRICS ENGINE ---
 let currentLyrics = [];
 let songStartTime = Date.now();
-let syncOffset = 0; // seconds
+let syncOffset = -5.0; // Default assumed stream latency
+let pauseTimestamp = 0;
 let lyricsTimer = null;
+let currentLyricMode = 'none'; // 'synced', 'plain', 'none'
+
+// Plain Lyrics variables
+let plainScrollSpeed = 0.5; 
+let scrollAccumulator = 0;
+let introDelayTimeout = null;
+let isUserInteracting = false;
 
 const lyricsContainer = document.getElementById('lyricsContainer');
-const activeLyricEl = document.getElementById('activeLyric');
+const syncedView = document.getElementById('syncedView');
+const plainView = document.getElementById('plainView');
+const emptyView = document.getElementById('emptyView');
+const lyricControls = document.getElementById('lyricControls');
+
+const activeLyricEl = document.getElementById('lyricActive');
+const prevLyricEl = document.getElementById('lyricPrev');
+const nextLyricEl = document.getElementById('lyricNext');
+const plainLyricsContent = document.getElementById('plainLyricsContent');
 const syncStatusEl = document.getElementById('syncStatus');
+
+let lastActiveIndex = -1;
 
 // 1. LRC Parser
 function parseLRC(lrcText) {
@@ -1369,9 +1429,7 @@ function parseLRC(lrcText) {
     for (let line of lines) {
         const match = timeRegex.exec(line);
         if (match) {
-            const minutes = parseInt(match[1], 10);
-            const seconds = parseFloat(match[2]);
-            const timeInSeconds = (minutes * 60) + seconds;
+            const timeInSeconds = (parseInt(match[1], 10) * 60) + parseFloat(match[2]);
             const text = line.replace(timeRegex, '').trim();
             if (text) parsed.push({ time: timeInSeconds, text: text });
         }
@@ -1379,64 +1437,149 @@ function parseLRC(lrcText) {
     return parsed;
 }
 
-// 2. Listen for Lyrics from Backend
+// 2. Set UI State
+function setLyricsUI(mode) {
+    currentLyricMode = mode;
+    lyricsContainer.classList.add('active'); 
+    
+    syncedView.style.display = mode === 'synced' ? 'block' : 'none';
+    plainView.style.display = mode === 'plain' ? 'block' : 'none';
+    emptyView.style.display = mode === 'none' ? 'block' : 'none';
+    
+    // Show controls for both synced and plain modes
+    lyricControls.style.visibility = (mode === 'synced' || mode === 'plain') ? 'visible' : 'hidden';
+    
+    if (mode === 'synced') {
+        syncStatusEl.innerText = `Sync: ${syncOffset > 0 ? '+' : ''}${syncOffset.toFixed(1)}s`;
+    } else if (mode === 'plain') {
+        syncStatusEl.innerText = `Speed: ${plainScrollSpeed.toFixed(1)}x`;
+    }
+}
+
+// 3. Listen for Data from Backend
 socket.on('lyrics_update', (data) => {
+    stopLyricsTimer();
+    if (introDelayTimeout) clearTimeout(introDelayTimeout);
+    
+    if (!data) {
+        setLyricsUI('none');
+        return;
+    }
+
     if (data.type === 'synced') {
         currentLyrics = parseLRC(data.data);
-        lyricsContainer.classList.add('active');
-        activeLyricEl.innerText = "♪ Syncing... ♪";
-        startLyricsTimer();
+        lastActiveIndex = -1;
+        setLyricsUI('synced');
+        startSyncedTimer();
+        
     } else if (data.type === 'plain') {
-        // Fallback: If no timestamps, just put it in the chat box like before
-        lyricsContainer.classList.remove('active');
-        stopLyricsTimer();
-        addMessage("lyrics_bot", "Found plain lyrics. Type /lyrics to view."); 
-        // You can implement a /lyrics command to show data.data
+        setLyricsUI('plain');
+        plainView.scrollTop = 0; 
+        plainLyricsContent.innerText = data.data;
+        startPlainAutoScroll();
     }
 });
 
-// 3. The Sync Timer
-function startLyricsTimer() {
-    stopLyricsTimer();
+// 4. Synced Timer (3-Line View)
+function startSyncedTimer() {
     lyricsTimer = setInterval(() => {
         if (!currentLyrics.length) return;
         
-        // Calculate how far we are into the song
-        const elapsedSeconds = (Date.now() - songStartTime) / 1000;
+        const playTime = ((Date.now() - songStartTime) / 1000) + syncOffset; 
+        let activeIndex = -1;
         
-        // Subtract the offset to adjust for stream latency (e.g., stream is 5s behind)
-        const playTime = elapsedSeconds + syncOffset; 
-        
-        // Find the correct lyric for this exact moment
-        let activeText = "♪";
         for (let i = 0; i < currentLyrics.length; i++) {
-            if (playTime >= currentLyrics[i].time) {
-                activeText = currentLyrics[i].text;
-            } else {
-                break; // We've found the current lyric, stop looking forward
-            }
+            if (playTime >= currentLyrics[i].time) activeIndex = i;
+            else break;
         }
         
-        if (activeLyricEl.innerText !== activeText) {
-            activeLyricEl.innerText = activeText;
+        if (activeIndex !== lastActiveIndex) {
+            lastActiveIndex = activeIndex;
+            activeLyricEl.innerText = activeIndex >= 0 ? currentLyrics[activeIndex].text : "♪";
+            prevLyricEl.innerText = activeIndex > 0 ? currentLyrics[activeIndex - 1].text : "";
+            nextLyricEl.innerText = activeIndex < currentLyrics.length - 1 ? currentLyrics[activeIndex + 1].text : "";
         }
-    }, 100); // Check every 100ms for smooth transitions
+    }, 100);
+}
+
+// 5. Plain Text Smart Crawl
+function startPlainAutoScroll() {
+    scrollAccumulator = 0;
+    isUserInteracting = false;
+
+    // Handle user interaction (The Manual Anchor)
+    const interactStart = () => { isUserInteracting = true; };
+    const interactEnd = () => { setTimeout(() => { isUserInteracting = false; }, 3000); }; // 3 sec grace period
+
+    plainView.addEventListener('mouseenter', interactStart);
+    plainView.addEventListener('mouseleave', interactEnd);
+    plainView.addEventListener('touchstart', interactStart, {passive: true});
+    plainView.addEventListener('touchend', interactEnd);
+    plainView.addEventListener('wheel', () => {
+        interactStart();
+        clearTimeout(plainView.wheelTimeout);
+        plainView.wheelTimeout = setTimeout(interactEnd, 500);
+    }, {passive: true});
+
+    // 15-second Intro Delay
+    introDelayTimeout = setTimeout(() => {
+        lyricsTimer = setInterval(() => {
+            if (!isUserInteracting) {
+                // Accumulate fractions, only scroll when it hits a whole integer
+                scrollAccumulator += plainScrollSpeed;
+                if (Math.abs(scrollAccumulator) >= 1) {
+                    const step = Math.trunc(scrollAccumulator);
+                    plainView.scrollTop += step;
+                    scrollAccumulator -= step;
+                }
+            }
+        }, 50); 
+    }, 15000); 
 }
 
 function stopLyricsTimer() {
     if (lyricsTimer) clearInterval(lyricsTimer);
 }
 
-// 4. Manual Sync Controls
+// 6. Dual-Purpose Controls (Time Shift or Speed Shift)
 document.getElementById('syncMinus').addEventListener('click', () => {
-    syncOffset -= 0.5; // push lyrics backward by 500ms
-    syncStatusEl.innerText = `Sync: ${syncOffset > 0 ? '+' : ''}${syncOffset.toFixed(1)}s`;
+    if (currentLyricMode === 'synced') {
+        syncOffset -= 0.5; 
+        syncStatusEl.innerText = `Sync: ${syncOffset > 0 ? '+' : ''}${syncOffset.toFixed(1)}s`;
+    } else if (currentLyricMode === 'plain') {
+        plainScrollSpeed = Math.max(0, plainScrollSpeed - 0.1); // Prevent negative speed
+        syncStatusEl.innerText = `Speed: ${plainScrollSpeed.toFixed(1)}x`;
+    }
 });
 
 document.getElementById('syncPlus').addEventListener('click', () => {
-    syncOffset += 0.5; // pull lyrics forward by 500ms
-    syncStatusEl.innerText = `Sync: ${syncOffset > 0 ? '+' : ''}${syncOffset.toFixed(1)}s`;
+    if (currentLyricMode === 'synced') {
+        syncOffset += 0.5; 
+        syncStatusEl.innerText = `Sync: ${syncOffset > 0 ? '+' : ''}${syncOffset.toFixed(1)}s`;
+    } else if (currentLyricMode === 'plain') {
+        plainScrollSpeed += 0.1;
+        syncStatusEl.innerText = `Speed: ${plainScrollSpeed.toFixed(1)}x`;
+    }
 });
+
+// 7. Audio Pause Math
+const audioEl = document.querySelector('audio');
+if(audioEl) {
+    audioEl.addEventListener('pause', () => {
+        pauseTimestamp = Date.now();
+        stopLyricsTimer();
+        if (introDelayTimeout) clearTimeout(introDelayTimeout);
+    });
+
+    audioEl.addEventListener('play', () => {
+        if (pauseTimestamp > 0) {
+            songStartTime += (Date.now() - pauseTimestamp);
+            pauseTimestamp = 0;
+        }
+        if (currentLyricMode === 'synced') startSyncedTimer();
+        else if (currentLyricMode === 'plain') startPlainAutoScroll(); // Note: will trigger the 15s delay again if paused during intro
+    });
+}
 
 const statusEl = document.getElementById('connection-status');
 const connectionOverlay = document.getElementById('connectionOverlay');
