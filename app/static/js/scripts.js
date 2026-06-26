@@ -178,7 +178,7 @@ function highlightCurrentShow() {
         } else {
             thumb.src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z'/%3E%3C/svg%3E";
         }
-        program.innerHTML=currentShow.querySelector('.title').innerHTML;
+        // program.innerHTML=currentShow.querySelector('.title').innerHTML;
 
 if ('mediaSession' in navigator) {
  if (navigator.mediaSession.metadata) {

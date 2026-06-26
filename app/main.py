@@ -94,9 +94,13 @@ def convert_to_plain_lrc(lrc):
         return plain_lyrics
 
 def get_lyrics(r):
-    if 'plainLyrics' in r: return r['plainLyrics']
-    elif 'syncedLyrics' in r: return convert_to_plain_lrc(r['syncedLyrics'])
-    else: return None
+    # Prefer synced lyrics, fallback to plain
+    if 'syncedLyrics' in r and r['syncedLyrics']: 
+        return {"type": "synced", "data": r['syncedLyrics']}
+    elif 'plainLyrics' in r and r['plainLyrics']: 
+        return {"type": "plain", "data": r['plainLyrics']}
+    else: 
+        return None
 
 def lyrics_search(song,artists):
     global last_lyrics
@@ -114,7 +118,7 @@ def lyrics_search(song,artists):
         #if not last_lyrics:
         socketio.emit('new_message', {"username":"lyrics_bot", "message":"Couldnt find lyrics" } , room='chat_room')
         return
-    socketio.emit('new_message', {"username":"lyrics_bot", "message":last_lyrics } , room='chat_room')
+    socketio.emit('lyrics_update', last_lyrics, room='chat_room')
 
 def fetch_program_info():
     npt = datetime.now(timezone.utc) + np_offset
@@ -267,7 +271,7 @@ def handle_connect():
             })
 
         if last_lyrics:
-            emit('new_message', {"username":"lyrics_bot", "message":last_lyrics })
+            emit('lyrics_update', last_lyrics)
 
         emit('listener_update', {"total_users":last_count })
 

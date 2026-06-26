@@ -755,6 +755,58 @@ color: #aaa;
   margin: 0;
   line-height: 1;
 }
+
+/* Live Lyrics Overlay */
+.live-lyrics-container {
+    position: fixed;
+    bottom: 80px; /* Sits right above the audio player */
+    left: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    border-radius: 12px;
+    padding: 15px;
+    width: calc(100% - 40px);
+    max-width: 400px;
+    z-index: 998;
+    display: none; /* Hidden by default */
+    border: 1px solid #1DB954;
+    transition: all 0.3s ease;
+}
+
+.live-lyrics-container.active {
+    display: flex;
+    flex-direction: column;
+}
+
+.lyric-text {
+    font-size: 18px;
+    font-weight: bold;
+    color: #fff;
+    text-align: center;
+    margin-bottom: 10px;
+    min-height: 28px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+}
+
+.lyric-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #aaa;
+}
+
+.sync-btn {
+    background: #333;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.sync-btn:hover { background: #555; }
 </style>
 </head>
 <body>
@@ -1005,6 +1057,14 @@ color: #aaa;
         <source src="https://stream-177.zeno.fm/sxr8kkycjseuv" type="audio/mpeg">
         Your browser does not support the audio element.
     </audio>
+<div class="live-lyrics-container" id="lyricsContainer">
+    <div class="lyric-text" id="activeLyric">Waiting for lyrics...</div>
+    <div class="lyric-controls">
+        <button class="sync-btn" id="syncMinus" title="Delay lyrics">-</button>
+        <span id="syncStatus">Sync: 0.0s</span>
+        <button class="sync-btn" id="syncPlus" title="Advance lyrics">+</button>
+    </div>
+</div>
     <div class="audio-player">
         <div class="player-left">
             <button class="play-pause-btn" id="playPauseBtn"></button>
@@ -1134,6 +1194,11 @@ const data = JSON.parse(event.data);
 if (data.streamTitle) {
 streamTitle=data.streamTitle.slice(0, data.streamTitle.lastIndexOf('[')).trim();
 title.innerText=streamTitle;
+
+songStartTime = Date.now();
+    syncOffset = -5.0; // Default buffer: assume stream is 5 seconds behind server
+    document.getElementById('syncStatus').innerText = `Sync: -5.0s`;
+
 let streamProgram=data.streamTitle.slice(data.streamTitle.lastIndexOf('[')+1,-1).trim();
 program.innerText=streamProgram;
 if (streamProgram=="On Air"){
@@ -1284,6 +1349,94 @@ if(isOwn){
             }
 
             const socket = io({reconnection: true,reconnectionAttempts: Infinity,reconnectionDelay: 1000,reconnectionDelayMax: 5000,timeout: 20000});
+
+// --- SYNCED LYRICS ENGINE ---
+let currentLyrics = [];
+let songStartTime = Date.now();
+let syncOffset = 0; // seconds
+let lyricsTimer = null;
+
+const lyricsContainer = document.getElementById('lyricsContainer');
+const activeLyricEl = document.getElementById('activeLyric');
+const syncStatusEl = document.getElementById('syncStatus');
+
+// 1. LRC Parser
+function parseLRC(lrcText) {
+    const lines = lrcText.split('\n');
+    const parsed = [];
+    const timeRegex = /\[(\d{2}):(\d{2}\.\d{2,3})\]/;
+    
+    for (let line of lines) {
+        const match = timeRegex.exec(line);
+        if (match) {
+            const minutes = parseInt(match[1], 10);
+            const seconds = parseFloat(match[2]);
+            const timeInSeconds = (minutes * 60) + seconds;
+            const text = line.replace(timeRegex, '').trim();
+            if (text) parsed.push({ time: timeInSeconds, text: text });
+        }
+    }
+    return parsed;
+}
+
+// 2. Listen for Lyrics from Backend
+socket.on('lyrics_update', (data) => {
+    if (data.type === 'synced') {
+        currentLyrics = parseLRC(data.data);
+        lyricsContainer.classList.add('active');
+        activeLyricEl.innerText = "♪ Syncing... ♪";
+        startLyricsTimer();
+    } else if (data.type === 'plain') {
+        // Fallback: If no timestamps, just put it in the chat box like before
+        lyricsContainer.classList.remove('active');
+        stopLyricsTimer();
+        addMessage("lyrics_bot", "Found plain lyrics. Type /lyrics to view."); 
+        // You can implement a /lyrics command to show data.data
+    }
+});
+
+// 3. The Sync Timer
+function startLyricsTimer() {
+    stopLyricsTimer();
+    lyricsTimer = setInterval(() => {
+        if (!currentLyrics.length) return;
+        
+        // Calculate how far we are into the song
+        const elapsedSeconds = (Date.now() - songStartTime) / 1000;
+        
+        // Subtract the offset to adjust for stream latency (e.g., stream is 5s behind)
+        const playTime = elapsedSeconds + syncOffset; 
+        
+        // Find the correct lyric for this exact moment
+        let activeText = "♪";
+        for (let i = 0; i < currentLyrics.length; i++) {
+            if (playTime >= currentLyrics[i].time) {
+                activeText = currentLyrics[i].text;
+            } else {
+                break; // We've found the current lyric, stop looking forward
+            }
+        }
+        
+        if (activeLyricEl.innerText !== activeText) {
+            activeLyricEl.innerText = activeText;
+        }
+    }, 100); // Check every 100ms for smooth transitions
+}
+
+function stopLyricsTimer() {
+    if (lyricsTimer) clearInterval(lyricsTimer);
+}
+
+// 4. Manual Sync Controls
+document.getElementById('syncMinus').addEventListener('click', () => {
+    syncOffset -= 0.5; // push lyrics backward by 500ms
+    syncStatusEl.innerText = `Sync: ${syncOffset > 0 ? '+' : ''}${syncOffset.toFixed(1)}s`;
+});
+
+document.getElementById('syncPlus').addEventListener('click', () => {
+    syncOffset += 0.5; // pull lyrics forward by 500ms
+    syncStatusEl.innerText = `Sync: ${syncOffset > 0 ? '+' : ''}${syncOffset.toFixed(1)}s`;
+});
 
 const statusEl = document.getElementById('connection-status');
 const connectionOverlay = document.getElementById('connectionOverlay');
