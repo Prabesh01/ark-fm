@@ -1233,17 +1233,20 @@ let streamTitle = '';
 const data = JSON.parse(event.data);
 if (data.streamTitle) {
 streamTitle=data.streamTitle.slice(0, data.streamTitle.lastIndexOf('[')).trim();
-title.innerText=streamTitle;
 
-songStartTime = Date.now();
+if (title.innerText !== streamTitle && title.innerText !== "") {
+        songStartTime = Date.now();
         syncOffset = -5.0; // Reset offset to default
-pauseTimestamp = 0;
+        pauseTimestamp = 0;
         document.getElementById('syncStatus').innerText = `Sync: -5.0s`;
         setLyricsUI('none'); // Set to -- until backend fetches the new lyrics
+}
+
+title.innerText=streamTitle;
 
 let streamProgram=data.streamTitle.slice(data.streamTitle.lastIndexOf('[')+1,-1).trim();
 program.innerText=streamProgram;
-if (streamProgram=="On Air"){
+if (streamProgram=="ON AIR"){
 document.querySelector('.current-show').classList.add('isnt-live');
 }else{
 document.querySelector('.current-show').classList.remove('isnt-live');

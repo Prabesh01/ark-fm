@@ -41,7 +41,7 @@ scheduler.start()
 atexit.register(lambda: scheduler.shutdown())
 
 chat_users = {}
-pinned_message = 'Send "/as" to toggle autoscroll on new user messages.'
+pinned_message = '' # 'Send "/as" to toggle autoscroll on new user messages.'
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 last_title=""
 last_program=""
@@ -116,7 +116,7 @@ def lyrics_search(song,artists):
         #if r!=0: r=r[0]
         #last_lyrics = get_lyrics(r)
         #if not last_lyrics:
-        socketio.emit('new_message', {"username":"lyrics_bot", "message":"Couldnt find lyrics" } , room='chat_room')
+        #socketio.emit('new_message', {"username":"lyrics_bot", "message":"Couldnt find lyrics" } , room='chat_room')
         return
     socketio.emit('lyrics_update', last_lyrics, room='chat_room')
 
@@ -170,7 +170,7 @@ def fetch_program_info():
 
         update_icecast_metadata(program,title)
 
-        if ' by ' in title: socketio.start_background_task(lyrics_search,*title.split('by'))
+        if ' by ' in title: socketio.start_background_task(lyrics_search,*title.split(' by '))
         else: 
             last_lyrics=""
             socketio.emit('new_message', {"username":"lyrics_bot", "message":"Skipped lyrics search" } , room='chat_room')
