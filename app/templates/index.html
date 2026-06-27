@@ -1087,7 +1087,7 @@ color: #aaa;
 <div class="live-lyrics-container" id="lyricsContainer">
     <div id="syncedView" style="display: none;">
         <div class="lyric-text lyric-dim" id="lyricPrev"></div>
-        <div class="lyric-text lyric-active" id="lyricActive">Waiting for stream...</div>
+        <div class="lyric-text lyric-active" id="lyricActive">Connecting...</div>
         <div class="lyric-text lyric-dim" id="lyricNext"></div>
     </div>
 
@@ -1276,7 +1276,7 @@ if (title.innerText !== streamTitle && title.innerText !== "") {
         syncOffset = -5.0; // Reset offset to default
         pauseTimestamp = 0;
         document.getElementById('syncStatus').innerText = `Sync: -5.0s`;
-        setLyricsUI('none'); // Set to -- until backend fetches the new lyrics
+        setLyricsUI('loading'); // Set to loading until backend fetches the new lyrics
 }
 
 title.innerText=streamTitle;
@@ -1480,8 +1480,14 @@ function setLyricsUI(mode) {
     
     syncedView.style.display = mode === 'synced' ? 'block' : 'none';
     plainView.style.display = mode === 'plain' ? 'block' : 'none';
-    emptyView.style.display = mode === 'none' ? 'block' : 'none';
+    emptyView.style.display = (mode === 'none' || mode === 'loading') ? 'block' : 'none';
     
+    if (mode === 'loading') {
+        emptyView.innerText = "...";
+    } else if (mode === 'none') {
+        emptyView.innerText = "♫";
+    }
+
     // Show controls for both synced and plain modes
     lyricControls.style.visibility = (mode === 'synced' || mode === 'plain') ? 'visible' : 'hidden';
     

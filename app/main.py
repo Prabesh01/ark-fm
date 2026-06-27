@@ -171,7 +171,7 @@ def fetch_program_info():
 
         update_icecast_metadata(program,title)
 
-        if ' by ' in title: socketio.start_background_task(lyrics_search,*title.split(' by '))
+        if ' by ' in title: socketio.start_background_task(lyrics_search,*title.rsplit(' by ',1))
         else: 
             last_lyrics=None
             # socketio.emit('new_message', {"username":"lyrics_bot", "message":"Skipped lyrics search" } , room='chat_room')
