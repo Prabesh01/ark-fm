@@ -1096,7 +1096,7 @@ color: #aaa;
     </div>
 
     <div id="emptyView" class="lyric-text lyric-dim">
-        --
+        ♪
     </div>
 
     <div class="lyric-controls" id="lyricControls">
@@ -1153,7 +1153,12 @@ sourceBtn.addEventListener('click', function(event) {
         let isPlaying = false;
         let isMuted = false;
         let lastVolume = volumeSlider.value;
-        
+
+let currentLyricMode = 'none'; // 'synced', 'plain', 'none'
+        let plainScrollSpeed = 0.5;
+let syncOffset = -5.0; // Default assumed stream latency
+const syncStatusEl = document.getElementById('syncStatus');
+
         // Play/Pause functionality
         playPauseBtn.addEventListener('click', function() {
             if (audio.paused) {
@@ -1164,15 +1169,47 @@ sourceBtn.addEventListener('click', function(event) {
         });
 
       document.addEventListener('keydown', function(event) {
+        if (document.activeElement.id=="messageInput"){return;}
+
         if (event.code === 'Space') {
-          if (document.activeElement.id=="messageInput"){return;}
           event.preventDefault(); // prevent scrolling
           if (audio.paused) {
             audio.play();
           } else {
             audio.pause();
           }
+        }else if (event.code === 'ArrowLeft'){
+event.preventDefault();
+            document.getElementById('syncMinus').click();
+        }else if (event.code === 'ArrowRight'){
+event.preventDefault();
+            document.getElementById('syncPlus').click();
+        }else if (event.code === 'Numpad0'){
+event.preventDefault();
+    if (currentLyricMode === 'synced') {
+        syncOffset = 0;
+        syncStatusEl.innerText = `Sync: 0.0s`;
+    } else if (currentLyricMode === 'plain') {
+        if (window.forceCrawlerStart) window.forceCrawlerStart(); // <-- Bypass delay!
+           if (plainScrollSpeed > 0) {
+                window.lastPlainScrollSpeed = plainScrollSpeed; // Remember old speed
+                plainScrollSpeed = 0;
+            } else {
+                plainScrollSpeed = window.lastPlainScrollSpeed || 0.5; // Restore or fallback to 0.5
+            }
+        syncStatusEl.innerText = `Speed: ${plainScrollSpeed.toFixed(1)}x`;
+    }
         }
+else if (event.code === 'ArrowUp' && currentLyricMode === 'plain') {
+        event.preventDefault(); // Stop native browser window scroll
+        if (window.triggerPlainInteraction) window.triggerPlainInteraction();
+        plainView.scrollTop -= 25; // Scroll up by 25 pixels
+    } 
+    else if (event.code === 'ArrowDown' && currentLyricMode === 'plain') {
+        event.preventDefault(); // Stop native browser window scroll
+        if (window.triggerPlainInteraction) window.triggerPlainInteraction();
+        plainView.scrollTop += 25; // Scroll down by 25 pixels
+    }
       });
         
         // audio.addEventListener('ended', function() {
@@ -1398,13 +1435,10 @@ if(isOwn){
 // --- LYRICS ENGINE ---
 let currentLyrics = [];
 let songStartTime = Date.now();
-let syncOffset = -5.0; // Default assumed stream latency
 let pauseTimestamp = 0;
 let lyricsTimer = null;
-let currentLyricMode = 'none'; // 'synced', 'plain', 'none'
 
 // Plain Lyrics variables
-let plainScrollSpeed = 0.5; 
 let scrollAccumulator = 0;
 let introDelayTimeout = null;
 let isUserInteracting = false;
@@ -1419,7 +1453,6 @@ const activeLyricEl = document.getElementById('lyricActive');
 const prevLyricEl = document.getElementById('lyricPrev');
 const nextLyricEl = document.getElementById('lyricNext');
 const plainLyricsContent = document.getElementById('plainLyricsContent');
-const syncStatusEl = document.getElementById('syncStatus');
 
 let lastActiveIndex = -1;
 
@@ -1471,14 +1504,14 @@ socket.on('lyrics_update', (data) => {
 
     if (data.type === 'synced') {
         currentLyrics = parseLRC(data.data);
-        lastActiveIndex = -1;
+        lastActiveIndex = -99;
         setLyricsUI('synced');
         startSyncedTimer();
         
     } else if (data.type === 'plain') {
         setLyricsUI('plain');
         plainView.scrollTop = 0; 
-        plainLyricsContent.innerText = data.data;
+        plainLyricsContent.innerText = data.data; // `••• Start •••\n\n${data.data}\n\n••• End •••`;
         startPlainAutoScroll();
     }
 });
@@ -1486,6 +1519,8 @@ socket.on('lyrics_update', (data) => {
 // 4. Synced Timer (3-Line View)
 function startSyncedTimer() {
     lyricsTimer = setInterval(() => {
+        if (audio.paused && lastActiveIndex !== -99) return;
+
         if (!currentLyrics.length) return;
         
         const playTime = ((Date.now() - songStartTime) / 1000) + syncOffset; 
@@ -1506,13 +1541,13 @@ function startSyncedTimer() {
 }
 
 // 5. Plain Text Smart Crawl
-function startPlainAutoScroll() {
+function startPlainAutoScroll(do_delay=true) {
     scrollAccumulator = 0;
     isUserInteracting = false;
 
-    // Handle user interaction (The Manual Anchor)
     const interactStart = () => { isUserInteracting = true; };
-    const interactEnd = () => { setTimeout(() => { isUserInteracting = false; }, 3000); }; // 3 sec grace period
+    // const interactEnd = () => { setTimeout(() => { isUserInteracting = false; }, 3000); };
+    const interactEnd = () => { isUserInteracting = false; if (window.forceCrawlerStart) window.forceCrawlerStart();};
 
     plainView.addEventListener('mouseenter', interactStart);
     plainView.addEventListener('mouseleave', interactEnd);
@@ -1524,11 +1559,11 @@ function startPlainAutoScroll() {
         plainView.wheelTimeout = setTimeout(interactEnd, 500);
     }, {passive: true});
 
-    // 15-second Intro Delay
-    introDelayTimeout = setTimeout(() => {
+    // Isolate the interval logic so we can call it on demand
+    const beginCrawling = () => {
+        if (lyricsTimer) clearInterval(lyricsTimer);
         lyricsTimer = setInterval(() => {
-            if (!isUserInteracting) {
-                // Accumulate fractions, only scroll when it hits a whole integer
+            if (!isUserInteracting && !audio.paused) {
                 scrollAccumulator += plainScrollSpeed;
                 if (Math.abs(scrollAccumulator) >= 1) {
                     const step = Math.trunc(scrollAccumulator);
@@ -1537,7 +1572,25 @@ function startPlainAutoScroll() {
                 }
             }
         }, 50); 
-    }, 15000); 
+    };
+
+    window.triggerPlainInteraction = () => {
+        interactStart();
+        clearTimeout(plainView.kbdTimeout);
+        // Gives you a 1.5s window of free movement after pressing an arrow key
+        plainView.kbdTimeout = setTimeout(interactEnd, 50); 
+    };
+
+    // Standard 15-second delay
+    if (do_delay===true){
+    introDelayTimeout = setTimeout(beginCrawling, 15000);
+    }else{beginCrawling();}
+
+    // Give our buttons a way to bypass the delay
+    window.forceCrawlerStart = () => {
+        if (introDelayTimeout) clearTimeout(introDelayTimeout);
+        beginCrawling();
+    };
 }
 
 function stopLyricsTimer() {
@@ -1550,6 +1603,7 @@ document.getElementById('syncMinus').addEventListener('click', () => {
         syncOffset -= 0.5; 
         syncStatusEl.innerText = `Sync: ${syncOffset > 0 ? '+' : ''}${syncOffset.toFixed(1)}s`;
     } else if (currentLyricMode === 'plain') {
+        if (window.forceCrawlerStart) window.forceCrawlerStart(); // <-- Bypass delay!
         plainScrollSpeed = Math.max(0, plainScrollSpeed - 0.1); // Prevent negative speed
         syncStatusEl.innerText = `Speed: ${plainScrollSpeed.toFixed(1)}x`;
     }
@@ -1560,6 +1614,7 @@ document.getElementById('syncPlus').addEventListener('click', () => {
         syncOffset += 0.5; 
         syncStatusEl.innerText = `Sync: ${syncOffset > 0 ? '+' : ''}${syncOffset.toFixed(1)}s`;
     } else if (currentLyricMode === 'plain') {
+        if (window.forceCrawlerStart) window.forceCrawlerStart(); // <-- Bypass delay!
         plainScrollSpeed += 0.1;
         syncStatusEl.innerText = `Speed: ${plainScrollSpeed.toFixed(1)}x`;
     }
@@ -1580,7 +1635,7 @@ if(audioEl) {
             pauseTimestamp = 0;
         }
         if (currentLyricMode === 'synced') startSyncedTimer();
-        else if (currentLyricMode === 'plain') startPlainAutoScroll(); // Note: will trigger the 15s delay again if paused during intro
+        else if (currentLyricMode === 'plain') startPlainAutoScroll(false);
     });
 }
 

@@ -99,6 +99,7 @@ def get_lyrics(r):
         return {"type": "synced", "data": r['syncedLyrics']}
     elif 'plainLyrics' in r and r['plainLyrics']: 
         return {"type": "plain", "data": r['plainLyrics']}
+    # elif 'syncedLyrics' in r and r['syncedLyrics']: return {"type": "plain", "data": convert_to_plain_lrc(r['syncedLyrics'])}
     else: 
         return None
 
@@ -111,13 +112,13 @@ def lyrics_search(song,artists):
     if r!=[]: r=r[0]
 
     last_lyrics = get_lyrics(r)
-    if not last_lyrics:
+    #if not last_lyrics:
         #r=requests.get("https://lrclib.net/api/search"+params,headers=headers}).json()
         #if r!=0: r=r[0]
         #last_lyrics = get_lyrics(r)
         #if not last_lyrics:
         #socketio.emit('new_message', {"username":"lyrics_bot", "message":"Couldnt find lyrics" } , room='chat_room')
-        return
+        #return
     socketio.emit('lyrics_update', last_lyrics, room='chat_room')
 
 def fetch_program_info():
@@ -172,8 +173,8 @@ def fetch_program_info():
 
         if ' by ' in title: socketio.start_background_task(lyrics_search,*title.split(' by '))
         else: 
-            last_lyrics=""
-            socketio.emit('new_message', {"username":"lyrics_bot", "message":"Skipped lyrics search" } , room='chat_room')
+            last_lyrics=None
+            # socketio.emit('new_message', {"username":"lyrics_bot", "message":"Skipped lyrics search" } , room='chat_room')
 
 def call_fetch_program_info():
     if is_onair: return
@@ -272,6 +273,7 @@ def handle_connect():
 
         if last_lyrics:
             emit('lyrics_update', last_lyrics)
+        else: emit('lyrics_update', None)
 
         emit('listener_update', {"total_users":last_count })
 
