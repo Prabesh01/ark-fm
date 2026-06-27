@@ -67,6 +67,7 @@ def get_listener_count():
     else:
         rr = requests.get(f"https://stream-tools.zenomedia.com/stations/{ZENO_ICECAST_MOUNT}/stats/live?include_outputs=true",headers={"Authorization": "Bearer "+token}).json()
         totalcnt=0
+        if not 'data' in rr: return
         for d in rr['data']: totalcnt += d['uniqueListeners']
     if last_count==totalcnt: return
     last_count=totalcnt
@@ -464,13 +465,10 @@ def sp_activity_seek():
 
     if uid in listen_alongs:
         for listener_spid in listen_alongs[uid]:
-            print(sp_users)
             listener_refresh = sp_users[listener_spid]['token']
-            print(sp_users)
             listener_token=sp_rf_token(listener_refresh)
             if listener_token:
                 rr=requests.put("https://api.spotify.com/v1/me/player/seek",headers={"Authorization":"Bearer "+listener_token},params={"position_ms":position_ms})
-                print(rr.text)
     return 'OK'
 
 @app.get('/activity')
@@ -500,7 +498,6 @@ def sp_activity():
             listener_token=sp_rf_token(listener_refresh)
             if listener_token:
                 rr=requests.put("https://api.spotify.com/v1/me/player/play",headers={"Authorization":"Bearer "+listener_token},json={"uris":["spotify:track:"+track]})
-                print(rr.text)
                 if rr.status_code==204:
                     continue
             del sp_users[listener_spid]                    

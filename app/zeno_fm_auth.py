@@ -90,22 +90,17 @@ def get_zeno_token():
     test_token = requests.get("https://stream-tools.zenomedia.com/users/me",headers={"Authorization": "Bearer "+token})
     # test_tokenn = requests.get("https://stream-tools.zenomedia.com/auth/profile",headers={"Authorization": "Bearer "+token})
 
-    if "id" in test_token.json():
-        print("Old access token works")
-        return token
+    if "id" in test_token.json(): return token
 
     rr = requests.post(TOKEN_URL,data={"grant_type":"refresh_token","refresh_token":creds['refresh_token'],"client_id":CLIENT_ID})
-    print(rr.text)
     if not 'access_token' in rr.json():
         login_resp=zeno_fm_login(zeno_username,zeno_password)
         if not login_resp:
             print("Couldn't login")
             return None
         else:
-            print("Logged in successfully")
             creds=login_resp
     else:
-        print("Refreshed token successfully!")
         creds=rr.json()
     with open(base_dir+'/creds.json','w') as f:
         json.dump(creds,f)
