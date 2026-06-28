@@ -144,17 +144,18 @@ def fetch_program_info():
 
     global last_title, last_program, last_lyrics, last_song_start
 
+    program = cur_show['program']
     if cur_show['stream']=="na":
         if program != last_program:
-            last_program = cur_show['program']
+            last_program = program
             last_lyrics = ""
             last_title = ""
             socketio.emit('pinned_message', {
                 'message': "Lyrics fetch will be skipped for current program."
             }, room='chat_room')
+            socketio.emit('lyrics_update', {"lyrics": None, "start_time": last_song_start}, room='chat_room')
         return
 
-    program = cur_show['program']
     if not last_title and last_program == program: return
 
     if program!=last_program:

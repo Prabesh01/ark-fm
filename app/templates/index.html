@@ -1277,6 +1277,13 @@ if (title.innerText !== streamTitle && title.innerText !== "") {
         pauseTimestamp = 0;
         document.getElementById('syncStatus').innerText = `Sync: -5.0s`;
         setLyricsUI('loading'); // Set to loading until backend fetches the new lyrics
+
+        clearTimeout(window.lyricsLoadTimeout);
+        window.lyricsLoadTimeout = setTimeout(() => {
+            if (currentLyricMode === 'loading') {
+                setLyricsUI('none'); // Gracefully give up if backend ignores us
+            }
+        }, 10000); // 10 seconds
 }
 
 title.innerText=streamTitle;
@@ -1508,6 +1515,7 @@ function setLyricsUI(mode) {
 socket.on('lyrics_update', (data) => {
     stopLyricsTimer();
     if (introDelayTimeout) clearTimeout(introDelayTimeout);
+    clearTimeout(window.lyricsLoadTimeout);
     
     if (!data.lyrics) {
         setLyricsUI('none');
