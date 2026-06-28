@@ -47,7 +47,7 @@ def get_lofi_radio():
     return f"{r['title']} by {r['author']}"
 
 def process_1fm(id):
-    r=get_json("https://www.1.fm/stplaylist/"+id)['nowplaying'][0]
+    r=get_json("https://playhistory.1cloud.fm/play_history/"+id)['now_playing']
     return f"{r['title']} by {r['artist']}"
 
 def get_lofi_1fm():
