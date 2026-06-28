@@ -7,6 +7,7 @@ import random
 import string
 import secrets
 from datetime import datetime, timezone, timedelta
+import time
 import os
 from dotenv import load_dotenv
 import threading
@@ -46,6 +47,7 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 last_title=""
 last_program=""
 last_lyrics=""
+last_song_start=time.time()
 last_count=0
 
 from utils.rando import generate_username
@@ -120,7 +122,7 @@ def lyrics_search(song,artists):
         #if not last_lyrics:
         #socketio.emit('new_message', {"username":"lyrics_bot", "message":"Couldnt find lyrics" } , room='chat_room')
         #return
-    socketio.emit('lyrics_update', last_lyrics, room='chat_room')
+    socketio.emit('lyrics_update', {"lyrics":last_lyrics,"start_time":last_song_start}, room='chat_room')
 
 def fetch_program_info():
     npt = datetime.now(timezone.utc) + np_offset
@@ -140,7 +142,7 @@ def fetch_program_info():
         for show in day_schedule:
             if hour>=show['time']: cur_show=show
 
-    global last_title, last_program, last_lyrics
+    global last_title, last_program, last_lyrics, last_song_start
 
     if cur_show['stream']=="na":
         last_program = cur_show['program']
@@ -169,6 +171,7 @@ def fetch_program_info():
     if title!=last_title or program!=last_program:
         last_title=title
         last_program=program
+        last_song_start=time.time()
 
         update_icecast_metadata(program,title)
 
@@ -272,9 +275,7 @@ def handle_connect():
                 'message': pinned_message
             })
 
-        if last_lyrics:
-            emit('lyrics_update', last_lyrics)
-        else: emit('lyrics_update', None)
+        emit('lyrics_update', {"lyrics":last_lyrics,"start_time":last_song_start})
 
         emit('listener_update', {"total_users":last_count })
 

@@ -1503,21 +1503,27 @@ socket.on('lyrics_update', (data) => {
     stopLyricsTimer();
     if (introDelayTimeout) clearTimeout(introDelayTimeout);
     
-    if (!data) {
+    if (!data.lyrics) {
         setLyricsUI('none');
         return;
     }
 
-    if (data.type === 'synced') {
-        currentLyrics = parseLRC(data.data);
+    const serverTime = data.start_time * 1000; // Convert to JS ms
+    const localTime = Date.now();
+
+    const streamLatency = localTime - serverTime;
+    syncOffset = (streamLatency / 1000) - 5;
+
+    if (data.lyrics.type === 'synced') {
+        currentLyrics = parseLRC(data.lyrics.data);
         lastActiveIndex = -99;
         setLyricsUI('synced');
         startSyncedTimer();
         
-    } else if (data.type === 'plain') {
+    } else if (data.lyrics.type === 'plain') {
         setLyricsUI('plain');
         plainView.scrollTop = 0; 
-        plainLyricsContent.innerText = data.data; // `••• Start •••\n\n${data.data}\n\n••• End •••`;
+        plainLyricsContent.innerText = data.lyrics.data; // `••• Start •••\n\n${data.data}\n\n••• End •••`;
         startPlainAutoScroll();
     }
 });
