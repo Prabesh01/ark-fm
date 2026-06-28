@@ -1301,7 +1301,13 @@ return;
 var songname='';
 var artistname='';
 if (streamTitle.includes(' by ')){
-var songarsp = streamTitle.split('by');
+const separator = ' by ';
+const lastIndex = streamTitle.lastIndexOf(separator);
+
+var songarsp = lastIndex !== -1 
+  ? [streamTitle.slice(0, lastIndex), streamTitle.slice(lastIndex + separator.length)] 
+  : [streamTitle];
+
 songname=songarsp[0];
 artistname=songarsp[1];
 }else{ songname= streamTitle}

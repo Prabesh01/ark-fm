@@ -64,8 +64,9 @@ def get_listener_count():
     global last_count
     token = get_zeno_token()
 
+    totalcnt=last_count
     if not token:
-        last_count='N/A'
+        totalcnt='N/A'
     else:
         rr = requests.get(f"https://stream-tools.zenomedia.com/stations/{ZENO_ICECAST_MOUNT}/stats/live?include_outputs=true",headers={"Authorization": "Bearer "+token}).json()
         totalcnt=0
@@ -108,9 +109,8 @@ def get_lyrics(r):
 
 def lyrics_search(song,artists):
     global last_lyrics
-    params=f"?track_name={song}&artist_name={artists}"
     headers={"User-Agent": f"ARK FM (https://domain)"}
-    r=requests.get("https://lrclib.net/api/search"+params,headers=headers).json()
+    r=requests.get("https://lrclib.net/api/search", params={"track_name": song, "artist_name": artists}, headers=headers).json()
 
     if r!=[]: r=r[0]
 
@@ -145,12 +145,13 @@ def fetch_program_info():
     global last_title, last_program, last_lyrics, last_song_start
 
     if cur_show['stream']=="na":
-        last_program = cur_show['program']
-        last_lyrics = ""
-        last_title = ""
-        socketio.emit('pinned_message', {
-            'message': "Lyrics fetch will be skipped for current program."
-        }, room='chat_room')
+        if program != last_program:
+            last_program = cur_show['program']
+            last_lyrics = ""
+            last_title = ""
+            socketio.emit('pinned_message', {
+                'message': "Lyrics fetch will be skipped for current program."
+            }, room='chat_room')
         return
 
     program = cur_show['program']
