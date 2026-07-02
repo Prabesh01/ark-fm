@@ -219,6 +219,20 @@ def index():
                          username=session['user'],
                          pinned_message=pinned_message, total_users=len(chat_users))
 
+
+
+@app.route('/home')
+def home():
+    if 'user' not in session:
+        session['user'] = generate_username()
+
+    return render_template('home.html',
+                         mail_domain='.'.join(domain.split('.', 1)[1:]),
+                         ZENO_ICECAST_MOUNT=ZENO_ICECAST_MOUNT,
+                         username=session['user'],
+                         pinned_message=pinned_message, total_users=len(chat_users))
+
+
 @app.get('/admin')
 def admin():
     password = request.args.get('password')

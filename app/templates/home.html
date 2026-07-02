@@ -1,0 +1,1722 @@
+<!DOCTYPE html>
+<!--
+Design idea taken from:
+- https://www.adultswim.com/where-to-watch
+- https://www.bloombergradio.com/
+-->
+<html lang="en">
+<head>
+<title>Listen to Ark FM</title>
+    <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<link rel='stylesheet' id='styles-css' href='/static/css/style.min.css' type='text/css' media='all' />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0a;
+            color: #fff;
+        }
+
+        .nav {
+            background: #000;
+            padding: 1.2rem 3rem;
+            border-bottom: 3px solid #667eea;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .nav .logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            letter-spacing: 4px;
+            color: white;
+            text-transform: uppercase;
+            position: relative;
+            display: inline-block;
+        }
+
+        .nav .logo::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 60%;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, transparent);
+        }
+.section {
+        width: 100%;
+        margin-right: auto;
+        margin-left: auto;
+}
+
+
+/*
+.current-show .show-slot {
+    background-color: #e3f2fd;
+    border-left: 4px solid #2196f3;
+    font-weight: bold;
+}
+*/
+
+.current-show:not(.isnt-live) .divider {
+    background: #ffea00 !important;
+}
+
+.current-show:not(.isnt-live) .time small {
+    position: relative;
+}
+
+.current-show:not(.isnt-live) .time small:before {
+    content: "live";
+    display: block;
+    text-transform: uppercase;
+    color: #ffffff;
+    background: #db5840;
+    font-size: 11px;
+    position: absolute;
+    right: 0px;
+    top: -20px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: bold;
+    line-height: 1;
+}
+    .wrap{max-width:1280px;margin:0 auto;}
+
+    header{
+      margin-bottom:28px;
+    }
+
+    h1{
+      color:white;
+      font-size:36px;
+      font-weight:700;
+      margin-bottom:8px;
+      letter-spacing:0.2px;
+    }
+
+    p.lead{
+      color:#cfcfcf;
+      font-size:16px;
+      margin-bottom:34px;
+    }
+
+    /* gallery layout */
+    .gallery{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:40px;
+      align-items:stretch;
+    }
+
+    .card{
+      cursor: pointer;
+      background:#111;
+      height:320px;
+      border-radius:2px;
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      box-shadow:0 2px 0 rgba(255,255,255,0.03) inset;
+    }
+
+    /* Use the provided combined image and show left/right halves */
+    .card.one{
+      background-image: url('/static/img/cover2.jpg');
+      background-size:auto;
+      background-position:left center;
+    }
+
+    .card.two{
+      background-image: url('/static/img/hp.jpg');
+      background-size: cover;
+      background-position:right center;
+    }
+
+    .card.three{
+      background-image: url('/static/img/rutu.png');
+      background-size:cover;
+      background-position:left center;
+    }
+
+    .card.four{
+      background-image: url('/static/img/zeno.png');
+      background-size: cover;
+      background-position:right center;
+    }
+
+    /* Maintain the large thumbnail look on wide screens */
+    .card::after{
+      /* subtle overlay to mimic the screenshot's darker look */
+      content:'';position:absolute;inset:0;background:linear-gradient(rgba(0,0,0,0.06), rgba(0,0,0,0));pointer-events:none;
+    }
+
+    .card:hover{
+      border:2px solid #fff;
+      box-shadow:0 0 15px rgba(255,255,255,0.3);
+      transform:translateY(-3px);
+    }
+
+    /* center the button underneath */
+    .cta-wrap{display:flex;justify-content:center;margin-top:40px}
+
+    .btn{
+      display:inline-block;
+      padding:14px 28px;
+      border:2px solid #ffe700; /* bright yellow border */
+      color:#fff;
+      text-decoration:none;
+      letter-spacing:2px;
+      font-size:14px;
+      background:transparent;
+      transition:background .18s, color .18s, transform .08s;
+      border-radius:2px;
+    }
+
+    .btn:hover{border:2px solid #fff; color:white;}
+
+        .footer {
+            /*background-color: #1a1a1a;*/
+            color: #aaa;
+            text-align: center;
+            /*margin-top: 50px;*/
+        }
+.footer i {
+font-size: 24px; padding:15px;
+cursor: pointer;
+color: #aaa;
+}
+    /* Responsive behavior: on small screens stack vertically and reduce heights */
+    @media (max-width:900px){
+      body{padding:28px}
+      h1{font-size:28px}
+      .gallery{grid-template-columns:1fr;gap:24px}
+      .card{height:220px}
+    }
+
+    @media (max-width:420px){
+      .card{height:160px}
+      .lead{font-size:14px}
+      .btn{padding:10px 18px;font-size:13px}
+    }
+
+
+        .audio-player {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #000;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        .player-left {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+
+        .player-right {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            flex: 1;
+        }
+
+        .play-pause-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            margin-right: 15px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .play-pause-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .thumbnail {
+            width: 50px;
+            height: 50px;
+            border-radius: 4px;
+            margin-right: 15px;
+            background-color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .song-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .song-name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .artist-name {
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        .volume-controls {
+            display: flex;
+            align-items: center;
+            margin-right: 15px;
+        }
+
+        .mute-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            margin-right: 10px;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .mute-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .volume-slider {
+            -webkit-appearance: none;
+            width: 100px;
+            height: 4px;
+            border-radius: 2px;
+            background: #555;
+            outline: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #1DB954;
+            cursor: pointer;
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #1DB954;
+            cursor: pointer;
+            border: none;
+        }
+
+        .source-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .source-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            .audio-player {
+                padding: 10px 15px;
+            }
+            
+            .thumbnail {
+                width: 40px;
+                height: 40px;
+                margin-right: 10px;
+            }
+            
+            .song-name {
+                font-size: 13px;
+            }
+            
+            .artist-name {
+                font-size: 11px;
+            }
+            
+            .volume-slider {
+                width: 80px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .audio-player {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .player-left, .player-right {
+                flex: none;
+                width: 100%;
+            }
+            
+            .player-right {
+                margin-top: 10px;
+                justify-content: space-between;
+            }
+            
+            .volume-controls {
+                margin-right: 0;
+            }
+        }
+@media (max-width: 479px){
+  .player-right {
+    display: none;
+  }
+}
+
+        /* Chat widget styles */
+        .chat-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .chat-icon {
+            width: 60px;
+            height: 60px;
+            background-color: #097969;
+            /* background-color: rgba(25, 147, 147, 0.2); */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+        
+        .chat-icon:hover {
+            transform: scale(1.1);
+        }
+        
+        .chat-icon svg {
+            width: 30px;
+            height: 30px;
+            fill: white;
+        }
+        
+        .chat-box {
+            position: absolute;
+            bottom: 70px;
+            right: 0;
+            width: 350px;
+            height: 500px;
+    background: -moz-linear-gradient(-45deg, #183850 0, #183850 25%, #192C46 50%, #22254C 75%, #22254C 100%);
+    background: -webkit-linear-gradient(-45deg, #183850 0, #183850 25%, #192C46 50%, #22254C 75%, #22254C 100%);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+            color: #0AD5C1;
+            border-radius: 12px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .chat-box.active {
+            display: flex;
+        }
+        
+        .chat-header {
+            /* background-color: #ff0000; */
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .chat-title {
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .username {
+            color: grey;
+            font-weight: normal;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .pinned-message {
+            background-color: rgba(255,255,255,0.95);
+            color: black;
+            padding: 10px 15px;
+            margin: 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .pinned-message .expand-icon {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .pinned-message.expanded {
+            max-height: none;
+        }
+        
+        .pinned-message.collapsed {
+            max-height: 40px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .message {
+            padding: 8px 12px;
+            border-radius: 8px;
+            background-color: rgba(25, 147, 147, 0.2);
+            max-width: 90%;
+            align-self: flex-start;
+        }
+        
+        .message.admin {
+            border-left: 3px solid yellow;
+            align-self: flex-start;
+        }
+        
+        .message.own {
+            /* background-color: #e3f2fd; */
+            color: #0EC879;
+            align-self: flex-end;
+        }
+        
+        .username {
+            font-weight: bold;
+            font-size: 12px;
+            margin-bottom: 4px;
+            color: white;
+        }
+        
+        .message.admin .username {
+            color: white;
+        }
+        
+        .message-content {
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .chat-input {
+            display: flex;
+            padding: 10px;
+            /* border-top: 1px solid #e0e0e0; */
+        }
+        
+        .chat-input input {
+            background-color: rgba(25, 147, 147, 0.2);
+            color: #0EC879;
+
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #0EC879;
+            border-radius: 20px;
+            outline: none;
+            font-size: 14px;
+        }
+
+.chat-input textarea {
+            background-color: rgba(25, 147, 147, 0.2);
+            color: #0EC879;
+
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #0EC879;
+            border-radius: 20px;
+            outline: none;
+            font-size: 14px;
+
+    resize: none;
+    min-height: 40px;
+    max-height: 120px;
+    font-family: inherit;
+}        
+
+        .chat-input button {
+            background-color: transparent;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 15px;
+            margin-left: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        /* Responsive styles */
+        @media (max-width: 480px) {
+            .chat-box {
+                width: 300px;
+                height: 400px;
+            }
+            
+            .chat-icon {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .chat-icon svg {
+                width: 24px;
+                height: 24px;
+            }
+        }
+        
+        @media (max-width: 350px) {
+            .chat-box {
+                width: 280px;
+            }
+        }
+
+#connection-status {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: bold;
+    z-index: 1000;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+    max-width: 300px;
+    background: '#FF9800';
+    color: 'white';
+}
+
+/* Connection Overlay */
+.connection-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(5px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: 10px;
+}
+
+.connection-overlay.visible {
+    display: flex;
+}
+
+.connection-message {
+    text-align: center;
+    color: #666;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.message-text {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* Connection states for chat box */
+.chat-box.disconnected {
+    opacity: 0.7;
+    filter: blur(1px);
+    pointer-events: none;
+}
+
+.chat-box.reconnecting {
+    opacity: 0.8;
+    filter: blur(0.5px);
+}
+
+.visitors {
+  background-image: linear-gradient(to bottom,#2e2e2e,#3d3d3d);
+  border-radius: 5px;
+  display:flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  padding-right: 15px;
+  position: fixed; 
+    top: 10px;
+    right: 10px;
+  width: auto;
+  z-index: 1000;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  opacity: 0;
+}
+.light {
+  background-color: #c60505;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin: 10px;
+  animation: glow 1s infinite ease-in-out;
+}
+
+@keyframes glow {
+  0% {
+    background-color: #c60505;
+  }
+  50% {
+    background-color: #f50000;
+    box-shadow: 5px 5px 15px #e30000, -5px -5px 15px #e30000;
+    transform: rotateZ(45deg);
+  }
+  0% {
+    background-color: #c60505;
+    transform: rotateZ(80deg);
+  }
+}
+
+.visitors-text {
+  color: white;
+  font-size: 1em;
+  margin: 0;
+  line-height: 1;
+}
+
+/* Live Lyrics Overlay */
+.live-lyrics-container {
+    position: fixed;
+    bottom: 80px; /* Sits right above the audio player */
+    left: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    border-radius: 12px;
+    padding: 15px;
+    width: calc(100% - 40px);
+    max-width: 400px;
+    z-index: 998;
+    display: none; /* Hidden by default */
+    border: 1px solid #1DB954;
+    transition: all 0.3s ease;
+}
+
+.live-lyrics-container.active {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Live Lyrics Updates */
+.lyric-text {
+    font-size: 18px;
+    font-weight: bold;
+    color: #fff;
+    text-align: center;
+    min-height: 28px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    transition: all 0.3s ease;
+}
+
+.lyric-active {
+    color: #1DB954; /* Spotify green highlight */
+    transform: scale(1.05);
+    margin: 8px 0;
+}
+
+.lyric-dim {
+    font-size: 14px;
+    color: #888;
+    opacity: 0.7;
+    margin: 4px 0;
+}
+
+.plain-lyrics-scroll {
+    max-height: 120px;
+    overflow-y: auto;
+    text-align: center;
+    color: #ccc;
+    font-size: 15px;
+    line-height: 1.6;
+    padding: 10px 5px;
+    /* Hide scrollbar for cleaner look */
+    scrollbar-width: none; 
+}
+.plain-lyrics-scroll::-webkit-scrollbar { display: none; }
+
+.lyric-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #aaa;
+}
+
+.sync-btn {
+    background: #333;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.sync-btn:hover { background: #555; }
+</style>
+</head>
+<body>
+        <nav class="nav">
+            <a href=""><div class="logo">ARK FM</div></a>
+        </nav>
+<div id="listenerDiv" class="visitors">
+  <div class="light"></div>
+  <p id="listenerCount" class="visitors-text">0 Listeners</p>
+</div>  
+</div>
+    <section>
+<img src="/static/img/cover3.jpg" style="height:auto;width:100%">
+    </section>
+<section style="background:white;">
+<div class="container">
+    <div class="schedule-mini">
+
+        <section class="header">
+
+            <span>Live & Upcoming</span>
+
+        </section>
+
+        <section class="content">
+
+            
+                                    <div id="station_ARK_RADIO">
+
+                        <div role="tablist" aria-label="AKR FM schedule">
+
+                                                            <button id="Sunday-tab"
+                                    class="day_Sunday"
+                                    tabindex="-1"
+                                    role="tab"
+                                    aria-selected="false"
+                                    aria-controls="SUN-panel">
+                                    <span class="day">
+                                        <span class="date-full">hehe</span>
+                                        <span class="date-short">Sun</span>
+                                    </span>
+                                    <span class="date">
+                                        <span class="date-full"></span>
+                                        <span class="date-short"></span>
+                                    </span>
+                                </button>
+
+                                                                <button id="Monday-tab"
+                                    class="day_Monday"
+                                    tabindex="-1"
+                                    role="tab"
+                                    aria-selected="false"
+                                    aria-controls="MON-panel">
+                                    <span class="day">
+                                        <span class="date-full">Monday</span>
+                                        <span class="date-short">Mon</span>
+                                    </span>
+                                    <span class="date">
+                                        <span class="date-full"></span>
+                                        <span class="date-short"></span>
+                                    </span>
+                                </button>
+
+                                                                <button id="Tuesday-tab"
+                                    class="day_Tuesday"
+                                    tabindex="-1"
+                                    role="tab"
+                                    aria-selected="false"
+                                    aria-controls="TUE-panel">
+                                    <span class="day">
+                                        <span class="date-full">Tuesday</span>
+                                        <span class="date-short">Tue</span>
+                                    </span>
+                                    <span class="date">
+                                        <span class="date-full"></span>
+                                        <span class="date-short"></span>
+                                    </span>
+                                </button>
+
+                                                                <button id="Wednesday-tab"
+                                    class="day_Wednesday"
+                                    tabindex="-1"
+                                    role="tab"
+                                    aria-selected="false"
+                                    aria-controls="WED-panel">
+                                    <span class="day">
+                                        <span class="date-full">Wednesday</span>
+                                        <span class="date-short">Wed</span>
+                                    </span>
+                                    <span class="date">
+                                        <span class="date-full"></span>
+                                        <span class="date-short"></span>
+                                    </span>
+                                </button>
+
+                                                                <button id="Thursday-tab"
+                                    class="day_Thursday"
+                                    tabindex="-1"
+                                    role="tab"
+                                    aria-selected="false"
+                                    aria-controls="THU-panel">
+                                    <span class="day">
+                                        <span class="date-full">Thursday</span>
+                                        <span class="date-short">Thu</span>
+                                    </span>
+                                    <span class="date">
+                                        <span class="date-full"></span>
+                                        <span class="date-short"></span>
+                                    </span>
+                                </button>
+
+                                                                <button id="Friday-tab"
+                                    class="day_Friday"
+                                    tabindex="-1"
+                                    role="tab"
+                                    aria-selected="false"
+                                    aria-controls="FRI-panel">
+                                    <span class="day">
+                                        <span class="date-full">Friday</span>
+                                        <span class="date-short">Fri</span>
+                                    </span>
+                                    <span class="date">
+                                        <span class="date-full"></span>
+                                        <span class="date-short"></span>
+                                    </span>
+                                </button>
+
+                                                                <button id="Saturday-tab"
+                                    class="day_Saturday"
+                                    tabindex="-1"
+                                    role="tab"
+                                    aria-selected="false"
+                                    aria-controls="SAT-panel">
+                                    <span class="day">
+                                        <span class="date-full">Saturday</span>
+                                        <span class="date-short">Sat</span>
+                                    </span>
+                                    <span class="date">
+                                        <span class="date-full"></span>
+                                        <span class="date-short"></span>
+                                    </span>
+                                </button>
+
+                                
+                        </div>
+
+                        <section class="schedule">
+                                                    <div id="SUN-panel"
+                                tabindex="0"
+                                role="tabpanel"
+                                aria-labelledby="Sunday-tab"
+                                hidden="hidden"                                >
+                            </div>
+
+                              <div id="MON-panel" tabindex="0" role="tabpanel" aria-labelledby="Monday-tab" hidden="hidden" </div>
+                              <div id="TUE-panel" tabindex="0" role="tabpanel" aria-labelledby="Tuesday-tab" hidden="hidden" </div>
+                              <div id="WED-panel" tabindex="0" role="tabpanel" aria-labelledby="Wednesday-tab" hidden="hidden" </div>
+                              <div id="THU-panel" tabindex="0" role="tabpanel" aria-labelledby="Thurshday-tab" hidden="hidden" </div>
+                              <div id="FRI-panel" tabindex="0" role="tabpanel" aria-labelledby="Friday-tab" hidden="hidden" </div>
+
+
+                                                    <div id="SAT-panel"
+                                tabindex="0"
+                                role="tabpanel"
+                                aria-labelledby="Saturday-tab"
+                                hidden="hidden"                                >
+                            </div>
+                                                </section>
+
+                    </div>
+            
+        </section>
+
+        <button class="fa fa-chevron-left" role="button" aria-label="Previous"></button>
+        <button class="fa fa-chevron-right" role="button" aria-label="Next"></button>
+    </div>
+</div>
+</section>
+  <div class="container wrap">
+    <header>
+      <h1>Listen us worldwide</h1>
+      <p class="lead">Waste your time with us</p>
+    </header>
+
+    <main>
+      <section class="gallery">
+        <a href=""><div class="card one" role="img" aria-label="Website thumbnail"></div></a>
+        <a href="https://www.hamropatro.com/radio/ARK-FM"><div class="card two" role="img" aria-label="Hamropatro thumbnail"></div></a>
+        <a href="https://top.gg/bot/786534057437691914"><div class="card three" role="img" aria-label="Routiney discord bot thumbnail"></div></a>
+        <a href="https://zeno.fm/radio/ark_fm/"><div class="card four" role="img" aria-label="zenofm thumbnail"></div></a>
+
+      </section>
+
+      <div class="cta-wrap">
+        <a class="btn" href="#top">BACK TO TOP</a>
+      </div>
+    </main>
+  </div>
+<div id="connection-status">Connecting...</div>
+    <!-- Chat Widget -->
+    <div class="chat-widget">
+        <div class="chat-icon" id="chatIcon">
+            <svg viewBox="0 0 24 24">
+                <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/>
+            </svg>
+        </div>
+        
+        <div class="chat-box" id="chatBox">
+            <div class="chat-header">
+                <div class="chat-title">Chatting as {{ username }} <br><span class="username"><i class="fa fa-circle" style="color: green; padding:5px;"></i><span id="online-count">{{total_users}}</span> online</span></div>
+                <button class="close-btn" id="closeChat"><i class="fa fa-close"></i></button>
+            </div>
+            
+            <div class="pinned-message collapsed" id="pinnedMessage" {%if not pinned_message%}style="display:none;"{%endif%}>
+                <div class="expand-icon"><i class="fa fa-angle-down"></i></div>
+                  {{pinned_message}}                
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <!-- Messages will be added here by JavaScript -->
+            </div>
+         
+        <!-- Connection Status Overlay -->
+        <div class="connection-overlay" id="connectionOverlay">
+            <div class="connection-message">
+                <div class="spinner"></div>
+                <div class="message-text">Connecting..</div>
+            </div>
+        </div>
+   
+            <div class="chat-input">
+                <textarea type="text" id="messageInput" placeholder="Connecting..." disabled rows="1"></textarea>
+                <button id="sendMessage" disabled>SEND</button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <section class="footer">
+<a target="_blank" href="https://www.facebook.com/medisno/"><i class="fa fa-facebook-f"></i></a>
+<a target="_blank" href="https://www.youtube.com/@medisno"><i class="fa fa-youtube"></i></a>
+<a target="_blank" href="mailto:arkfm@{{mail_domain}}"><i class="fa fa-envelope"></i></a>
+<p style="color:white">Medisno Solutions<br>Pokhara, Nepal<br></p><br>
+    </section>
+    <audio style="display:none;" id="audioElement" controls>
+        <source src="https://stream-177.zeno.fm/sxr8kkycjseuv" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+<div class="live-lyrics-container" id="lyricsContainer">
+    <div id="syncedView" style="display: none;">
+        <div class="lyric-text lyric-dim" id="lyricPrev"></div>
+        <div class="lyric-text lyric-active" id="lyricActive">Connecting...</div>
+        <div class="lyric-text lyric-dim" id="lyricNext"></div>
+    </div>
+
+    <div id="plainView" class="plain-lyrics-scroll" style="display: none;">
+        <div id="plainLyricsContent"></div>
+    </div>
+
+    <div id="emptyView" class="lyric-text lyric-dim">
+        ♪
+    </div>
+
+    <div class="lyric-controls" id="lyricControls">
+        <button class="sync-btn" id="syncMinus" title="Delay lyrics">-</button>
+        <span id="syncStatus">Sync: -5.0s</span>
+        <button class="sync-btn" id="syncPlus" title="Advance lyrics">+</button>
+    </div>
+</div>
+    <div class="audio-player">
+        <div class="player-left">
+            <button class="play-pause-btn" id="playPauseBtn"></button>
+            <div class="thumbnail">
+                <img id="pragram-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z'/%3E%3C/svg%3E" alt="Album Art">
+            </div>
+            <div class="song-info">
+                <div id="program" class="song-name"></div>
+                <div id="title" class="artist-name"></div>
+            </div>
+        </div>
+        
+        <div class="player-right">
+            <div class="volume-controls">
+                <button class="mute-btn" id="muteBtn"></button>
+                <input type="range" min="0" max="100" value="80" class="volume-slider" id="volumeSlider">
+            </div>
+           <button title="Stream Source" data-url="" class="source-btn" id="sourceBtn"><i class="fa fa-info-circle"></i></button>
+        </div>
+    </div>
+
+<script>
+const sourceBtn = document.getElementById('sourceBtn');
+sourceBtn.addEventListener('click', function(event) {
+    srcurl=sourceBtn.getAttribute('data-url');
+    if (srcurl.trim().length!=0){
+        window.open(srcurl);
+    }else{ return false;}
+});
+</script>
+<script type="text/javascript" src="/static/js/libraries.min.js" id="vendor-scripts-js"></script>
+<script type="text/javascript" src="/static/js/scripts.js" id="custom-scripts-js"></script>
+
+    <script>
+        const audio = document.getElementById('audioElement');
+
+        // Audio player functionality
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        playPauseBtn.innerHTML = '<i class="fa fa-play"></i>';
+        const muteBtn = document.getElementById('muteBtn');
+        muteBtn.innerHTML = '<i class="fa fa-volume-up"></i>';
+        const volumeSlider = document.getElementById('volumeSlider');
+        
+        audio.volume = volumeSlider.value / 100;
+
+        let isPlaying = false;
+        let isMuted = false;
+        let lastVolume = volumeSlider.value;
+
+let currentLyricMode = 'none'; // 'synced', 'plain', 'none'
+        let plainScrollSpeed = 0.5;
+let syncOffset = -5.0; // Default assumed stream latency
+const syncStatusEl = document.getElementById('syncStatus');
+
+        // Play/Pause functionality
+        playPauseBtn.addEventListener('click', function() {
+            if (audio.paused) {
+                audio.play();
+            } else {
+                audio.pause();
+            }
+        });
+
+      document.addEventListener('keydown', function(event) {
+        if (document.activeElement.id=="messageInput"){return;}
+
+        if (event.code === 'Space') {
+          event.preventDefault(); // prevent scrolling
+          if (audio.paused) {
+            audio.play();
+          } else {
+            audio.pause();
+          }
+        }else if (event.code === 'ArrowLeft'){
+event.preventDefault();
+            document.getElementById('syncMinus').click();
+        }else if (event.code === 'ArrowRight'){
+event.preventDefault();
+            document.getElementById('syncPlus').click();
+        }else if (event.code === 'Numpad0'){
+event.preventDefault();
+    if (currentLyricMode === 'synced') {
+        syncOffset = 0;
+        syncStatusEl.innerText = `Sync: 0.0s`;
+    } else if (currentLyricMode === 'plain') {
+        if (window.forceCrawlerStart) window.forceCrawlerStart(); // <-- Bypass delay!
+           if (plainScrollSpeed > 0) {
+                window.lastPlainScrollSpeed = plainScrollSpeed; // Remember old speed
+                plainScrollSpeed = 0;
+            } else {
+                plainScrollSpeed = window.lastPlainScrollSpeed || 0.5; // Restore or fallback to 0.5
+            }
+        syncStatusEl.innerText = `Speed: ${plainScrollSpeed.toFixed(1)}x`;
+    }
+        }
+else if (event.code === 'ArrowUp' && currentLyricMode === 'plain') {
+        event.preventDefault(); // Stop native browser window scroll
+        if (window.triggerPlainInteraction) window.triggerPlainInteraction();
+        plainView.scrollTop -= 25; // Scroll up by 25 pixels
+    } 
+    else if (event.code === 'ArrowDown' && currentLyricMode === 'plain') {
+        event.preventDefault(); // Stop native browser window scroll
+        if (window.triggerPlainInteraction) window.triggerPlainInteraction();
+        plainView.scrollTop += 25; // Scroll down by 25 pixels
+    }
+      });
+        
+        // audio.addEventListener('ended', function() {
+        //    audio.muted = !audio.muted;
+        //    playPauseBtn.textContent = '▶';
+        // });
+
+        // Mute/Unmute functionality
+        muteBtn.addEventListener('click', function() {
+            audio.muted = !audio.muted;
+            muteBtn.innerHTML = audio.muted ? '<i class="fa fa-volume-off"></i>' : '<i class="fa fa-volume-up"></i>';
+        });
+        
+        // Volume slider functionality
+        volumeSlider.addEventListener('input', function() {
+            audio.volume = volumeSlider.value / 100;
+
+            const volume = audio.volume;
+            
+            // Update mute button state based on volume
+            if (volume == 0) {
+                audio.muted = true;
+                muteBtn.innerHTML = '<i class="fa fa-volume-off"></i>';
+            } else {
+                audio.muted = false;
+                muteBtn.innerHTML = '<i class="fa fa-volume-up"></i>';
+            }
+        });
+
+audio.addEventListener('play', () => {
+  playPauseBtn.innerHTML = '<i class="fa fa-pause"></i>';
+});
+
+audio.addEventListener('pause', () => {
+  playPauseBtn.innerHTML = '<i class="fa fa-play"></i>';
+});
+
+        // Update volume slider when audio volume changes (for external changes)
+        audio.addEventListener('volumechange', function() {
+            if (!audio.muted) {
+                volumeSlider.value = audio.volume * 100;
+            }
+        });        
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+
+
+
+const program = document.getElementById('program');
+const title = document.getElementById('title');
+
+    const eventSource = new EventSource('https://api.zeno.fm/mounts/metadata/subscribe/{{ZENO_ICECAST_MOUNT}}');
+    eventSource.addEventListener('message', function(event) {
+let streamTitle = '';
+        try {
+const data = JSON.parse(event.data);
+if (data.streamTitle) {
+streamTitle=data.streamTitle.slice(0, data.streamTitle.lastIndexOf('[')).trim();
+
+if (title.innerText !== streamTitle && title.innerText !== "") {
+        songStartTime = Date.now();
+        syncOffset = -5.0; // Reset offset to default
+        pauseTimestamp = 0;
+        document.getElementById('syncStatus').innerText = `Sync: -5.0s`;
+        setLyricsUI('loading'); // Set to loading until backend fetches the new lyrics
+
+        clearTimeout(window.lyricsLoadTimeout);
+        window.lyricsLoadTimeout = setTimeout(() => {
+            if (currentLyricMode === 'loading') {
+                setLyricsUI('none'); // Gracefully give up if backend ignores us
+            }
+        }, 10000); // 10 seconds
+}
+
+title.innerText=streamTitle;
+
+let streamProgram=data.streamTitle.slice(data.streamTitle.lastIndexOf('[')+1,-1).trim();
+program.innerText=streamProgram;
+if (streamProgram=="ON AIR"){
+document.querySelector('.current-show').classList.add('isnt-live');
+}else{
+document.querySelector('.current-show').classList.remove('isnt-live');
+}
+}else{
+return;}
+} catch (error) {
+console.error('Error parsing stream data:', event.data);
+return;
+}
+            //program.innerText=data.program;
+            //title.innerText=data.title;
+            //document.getElementById('sourceBtn').setAttribute('data-url', data.source);
+
+var songname='';
+var artistname='';
+if (streamTitle.includes(' by ')){
+const separator = ' by ';
+const lastIndex = streamTitle.lastIndexOf(separator);
+
+var songarsp = lastIndex !== -1 
+  ? [streamTitle.slice(0, lastIndex), streamTitle.slice(lastIndex + separator.length)] 
+  : [streamTitle];
+
+songname=songarsp[0];
+artistname=songarsp[1];
+}else{ songname= streamTitle}
+
+if ('mediaSession' in navigator) {
+ if (navigator.mediaSession.metadata) {
+
+  const existingMetadata = navigator.mediaSession.metadata;
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: songname,
+    artist: artistname,
+    album: existingMetadata.album,
+    artwork: existingMetadata.artwork
+  });
+
+ }else{
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: songname,
+    artist: artistname,
+  });
+  }
+}
+
+        });
+
+
+            // Elements
+            const chatIcon = document.getElementById('chatIcon');
+            const chatBox = document.getElementById('chatBox');
+            const closeChat = document.getElementById('closeChat');
+            const chatMessages = document.getElementById('chatMessages');
+            const messageInput = document.getElementById('messageInput');
+            const sendMessage = document.getElementById('sendMessage');
+            const pinnedMessage = document.getElementById('pinnedMessage');
+            const onlineCount = document.getElementById('online-count');
+            const username = '{{ username }}';
+            var autoscroll = true;
+            const listenerCount = document.getElementById('listenerCount'); 
+            const listenerDiv = document.getElementById('listenerDiv');
+            // Toggle chat box
+            chatIcon.addEventListener('click', function() {
+                chatBox.classList.toggle('active');
+                messageInput.focus();
+            });
+            
+            closeChat.addEventListener('click', function() {
+                chatBox.classList.remove('active');
+            });
+            
+            // Toggle pinned message
+            pinnedMessage.addEventListener('click', function() {
+                if (pinnedMessage.classList.contains('collapsed')) {
+                    pinnedMessage.classList.remove('collapsed');
+                    pinnedMessage.classList.add('expanded');
+                    pinnedMessage.querySelector('.expand-icon').innerHTML = '<i class="fa fa-angle-up"></i>';
+                } else {
+                    pinnedMessage.classList.remove('expanded');
+                    pinnedMessage.classList.add('collapsed');
+                    pinnedMessage.querySelector('.expand-icon').innerHTML = '<i class="fa fa-angle-down"></i>';
+                }
+            });
+            
+            // Send message function
+            function sendMessageHandler() {
+                const message = messageInput.value.trim();
+                if (message) {
+                    if (message=="/as"){
+                        autoscroll=!autoscroll;
+                        messageInput.value = '';
+                        addMessage(username, "/as",true);
+                        addMessage("system", `autoscroll ${autoscroll ? "enabled" : "disabled"}`);
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                        return;
+                    }
+                    socket.emit('send_message', { message: message });
+                    messageInput.value = '';
+                }
+            }
+            
+            // Send message on button click
+            sendMessage.addEventListener('click', sendMessageHandler);
+            
+            // Send message on Enter key
+            messageInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    if (e.shiftKey) {
+                        return;
+                    }
+                    e.preventDefault();
+                    sendMessageHandler();
+                }
+            });
+
+            // Add message to chat
+            function addMessage(sender, message, isOwn=false) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message';
+                if (sender==username) {isOwn=true;}
+
+                if (sender==="Admin") {
+                    messageDiv.classList.add('admin');
+                } 
+                if (isOwn) {
+                    messageDiv.classList.add('own');
+                }
+                
+const usernameDiv = document.createElement('div');
+usernameDiv.className = 'username';
+usernameDiv.textContent = sender;
+
+const contentDiv = document.createElement('div');
+contentDiv.className = 'message-content';
+contentDiv.innerText = message;
+
+messageDiv.appendChild(usernameDiv);
+messageDiv.appendChild(contentDiv);
+                
+                chatMessages.appendChild(messageDiv);
+if(isOwn){
+     chatMessages.scrollTop = chatMessages.scrollHeight;
+}else{
+    if (!autoscroll) {
+        if (username != "lyrics_bot") {return;}
+    }
+    messageDiv.scrollIntoView({behavior: 'smooth', block:'start'});
+}
+            }
+
+            const socket = io({reconnection: true,reconnectionAttempts: Infinity,reconnectionDelay: 1000,reconnectionDelayMax: 5000,timeout: 20000});
+
+// --- LYRICS ENGINE ---
+let currentLyrics = [];
+let songStartTime = Date.now();
+let pauseTimestamp = 0;
+let lyricsTimer = null;
+
+// Plain Lyrics variables
+let scrollAccumulator = 0;
+let introDelayTimeout = null;
+let isUserInteracting = false;
+
+const lyricsContainer = document.getElementById('lyricsContainer');
+const syncedView = document.getElementById('syncedView');
+const plainView = document.getElementById('plainView');
+const emptyView = document.getElementById('emptyView');
+const lyricControls = document.getElementById('lyricControls');
+
+const activeLyricEl = document.getElementById('lyricActive');
+const prevLyricEl = document.getElementById('lyricPrev');
+const nextLyricEl = document.getElementById('lyricNext');
+const plainLyricsContent = document.getElementById('plainLyricsContent');
+
+let lastActiveIndex = -1;
+
+// 1. LRC Parser
+function parseLRC(lrcText) {
+    const lines = lrcText.split('\n');
+    const parsed = [];
+    const timeRegex = /\[(\d{2}):(\d{2}\.\d{2,3})\]/;
+    
+    for (let line of lines) {
+        const match = timeRegex.exec(line);
+        if (match) {
+            const timeInSeconds = (parseInt(match[1], 10) * 60) + parseFloat(match[2]);
+            const text = line.replace(timeRegex, '').trim();
+            if (text) parsed.push({ time: timeInSeconds, text: text });
+        }
+    }
+    return parsed;
+}
+
+// 2. Set UI State
+function setLyricsUI(mode) {
+    currentLyricMode = mode;
+    lyricsContainer.classList.add('active'); 
+    
+    syncedView.style.display = mode === 'synced' ? 'block' : 'none';
+    plainView.style.display = mode === 'plain' ? 'block' : 'none';
+    emptyView.style.display = (mode === 'none' || mode === 'loading') ? 'block' : 'none';
+    
+    if (mode === 'loading') {
+        emptyView.innerText = "...";
+    } else if (mode === 'none') {
+        emptyView.innerText = "♫";
+    }
+
+    // Show controls for both synced and plain modes
+    lyricControls.style.visibility = (mode === 'synced' || mode === 'plain') ? 'visible' : 'hidden';
+    
+    if (mode === 'synced') {
+        syncStatusEl.innerText = `Sync: ${syncOffset > 0 ? '+' : ''}${syncOffset.toFixed(1)}s`;
+    } else if (mode === 'plain') {
+        syncStatusEl.innerText = `Speed: ${plainScrollSpeed.toFixed(1)}x`;
+    }
+}
+
+// 3. Listen for Data from Backend
+socket.on('lyrics_update', (data) => {
+    stopLyricsTimer();
+    if (introDelayTimeout) clearTimeout(introDelayTimeout);
+    clearTimeout(window.lyricsLoadTimeout);
+    
+    if (!data.lyrics) {
+        setLyricsUI('none');
+        return;
+    }
+
+    const serverTime = data.start_time * 1000; // Convert to JS ms
+    const localTime = Date.now();
+
+    const streamLatency = localTime - serverTime;
+    syncOffset = (streamLatency / 1000) - 5;
+
+    if (data.lyrics.type === 'synced') {
+        currentLyrics = parseLRC(data.lyrics.data);
+        lastActiveIndex = -99;
+        setLyricsUI('synced');
+        startSyncedTimer();
+        
+    } else if (data.lyrics.type === 'plain') {
+        setLyricsUI('plain');
+        plainView.scrollTop = 0; 
+        plainLyricsContent.innerText = data.lyrics.data; // `••• Start •••\n\n${data.data}\n\n••• End •••`;
+        startPlainAutoScroll();
+    }
+});
+
+// 4. Synced Timer (3-Line View)
+function startSyncedTimer() {
+    lyricsTimer = setInterval(() => {
+        if (audio.paused && lastActiveIndex !== -99) return;
+
+        if (!currentLyrics.length) return;
+        
+        const playTime = ((Date.now() - songStartTime) / 1000) + syncOffset; 
+        let activeIndex = -1;
+        
+        for (let i = 0; i < currentLyrics.length; i++) {
+            if (playTime >= currentLyrics[i].time) activeIndex = i;
+            else break;
+        }
+        
+        if (activeIndex !== lastActiveIndex) {
+            lastActiveIndex = activeIndex;
+            activeLyricEl.innerText = activeIndex >= 0 ? currentLyrics[activeIndex].text : "♪";
+            prevLyricEl.innerText = activeIndex > 0 ? currentLyrics[activeIndex - 1].text : "";
+            nextLyricEl.innerText = activeIndex < currentLyrics.length - 1 ? currentLyrics[activeIndex + 1].text : "";
+        }
+    }, 100);
+}
+
+// 5. Plain Text Smart Crawl
+function startPlainAutoScroll(do_delay=true) {
+    scrollAccumulator = 0;
+    isUserInteracting = false;
+
+    const interactStart = () => { isUserInteracting = true; };
+    // const interactEnd = () => { setTimeout(() => { isUserInteracting = false; }, 3000); };
+    const interactEnd = () => { isUserInteracting = false; if (window.forceCrawlerStart) window.forceCrawlerStart();};
+
+    plainView.addEventListener('mouseenter', interactStart);
+    plainView.addEventListener('mouseleave', interactEnd);
+    plainView.addEventListener('touchstart', interactStart, {passive: true});
+    plainView.addEventListener('touchend', interactEnd);
+    plainView.addEventListener('wheel', () => {
+        interactStart();
+        clearTimeout(plainView.wheelTimeout);
+        plainView.wheelTimeout = setTimeout(interactEnd, 500);
+    }, {passive: true});
+
+    // Isolate the interval logic so we can call it on demand
+    const beginCrawling = () => {
+        if (lyricsTimer) clearInterval(lyricsTimer);
+        lyricsTimer = setInterval(() => {
+            if (!isUserInteracting && !audio.paused) {
+                scrollAccumulator += plainScrollSpeed;
+                if (Math.abs(scrollAccumulator) >= 1) {
+                    const step = Math.trunc(scrollAccumulator);
+                    plainView.scrollTop += step;
+                    scrollAccumulator -= step;
+                }
+            }
+        }, 50); 
+    };
+
+    window.triggerPlainInteraction = () => {
+        interactStart();
+        clearTimeout(plainView.kbdTimeout);
+        // Gives you a 1.5s window of free movement after pressing an arrow key
+        plainView.kbdTimeout = setTimeout(interactEnd, 50); 
+    };
+
+    // Standard 15-second delay
+    if (do_delay===true){
+    introDelayTimeout = setTimeout(beginCrawling, 15000);
+    }else{beginCrawling();}
+
+    // Give our buttons a way to bypass the delay
+    window.forceCrawlerStart = () => {
+        if (introDelayTimeout) clearTimeout(introDelayTimeout);
+        beginCrawling();
+    };
+}
+
+function stopLyricsTimer() {
+    if (lyricsTimer) clearInterval(lyricsTimer);
+}
+
+// 6. Dual-Purpose Controls (Time Shift or Speed Shift)
+document.getElementById('syncMinus').addEventListener('click', () => {
+    if (currentLyricMode === 'synced') {
+        syncOffset -= 0.5; 
+        syncStatusEl.innerText = `Sync: ${syncOffset > 0 ? '+' : ''}${syncOffset.toFixed(1)}s`;
+    } else if (currentLyricMode === 'plain') {
+        if (window.forceCrawlerStart) window.forceCrawlerStart(); // <-- Bypass delay!
+        plainScrollSpeed = Math.max(0, plainScrollSpeed - 0.1); // Prevent negative speed
+        syncStatusEl.innerText = `Speed: ${plainScrollSpeed.toFixed(1)}x`;
+    }
+});
+
+document.getElementById('syncPlus').addEventListener('click', () => {
+    if (currentLyricMode === 'synced') {
+        syncOffset += 0.5; 
+        syncStatusEl.innerText = `Sync: ${syncOffset > 0 ? '+' : ''}${syncOffset.toFixed(1)}s`;
+    } else if (currentLyricMode === 'plain') {
+        if (window.forceCrawlerStart) window.forceCrawlerStart(); // <-- Bypass delay!
+        plainScrollSpeed += 0.1;
+        syncStatusEl.innerText = `Speed: ${plainScrollSpeed.toFixed(1)}x`;
+    }
+});
+
+// 7. Audio Pause Math
+const audioEl = document.querySelector('audio');
+if(audioEl) {
+    audioEl.addEventListener('pause', () => {
+        pauseTimestamp = Date.now();
+        stopLyricsTimer();
+        if (introDelayTimeout) clearTimeout(introDelayTimeout);
+    });
+
+    audioEl.addEventListener('play', () => {
+        if (pauseTimestamp > 0) {
+            songStartTime += (Date.now() - pauseTimestamp);
+            pauseTimestamp = 0;
+        }
+        if (currentLyricMode === 'synced') startSyncedTimer();
+        else if (currentLyricMode === 'plain') startPlainAutoScroll(false);
+    });
+}
+
+const statusEl = document.getElementById('connection-status');
+const connectionOverlay = document.getElementById('connectionOverlay');
+socket.on('connect', () => {
+    statusEl.style.opacity = '0';
+    messageInput.disabled = false;
+    sendMessage.disabled = false;
+    messageInput.placeholder = 'Type your message...';
+    connectionOverlay.classList.remove('visible');
+    listenerDiv.style.opacity="1";
+});
+socket.on('disconnect', (reason) => {
+    statusEl.style.opacity = '1';
+    statusEl.innerText="Connection Lost. Trying to connect..";
+        messageInput.disabled = true;
+        sendMessage.disabled = true;
+        messageInput.placeholder = 'Disconnected!';
+    connectionOverlay.classList.add('visible');
+    document.getElementById('title').innerText="";
+    listenerDiv.style.opacity="0";
+});
+
+        socket.on('new_message', (data) => {
+            addMessage(data.username,data.message);
+        });
+
+        socket.on('pinned_message', (data) => {
+            if (data.message.trim().length==0){
+                pinnedMessage.style.display="none";
+            }else{
+                pinnedMessage.style.display="block";
+                pinnedMessage.innerText=data.message;
+            }
+        });
+
+        socket.on('online_update', (data) => {
+            onlineCount.innerText=data.total_users;
+        });
+        socket.on('listener_update',(data) => {
+            listenerCount.innerText=data.total_users+" Listeners"
+        });
+});
+    </script>
+
+</html>
