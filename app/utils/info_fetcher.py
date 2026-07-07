@@ -17,17 +17,17 @@ def get_sbs_chill():
     return r['songDisplayName']
 
 def process_box(id):
-    r=get_json("https://prod-api.radioapi.me/metadata/"+id)
+    r=get_json(f"https://openapi.streamafrica.cloud/metadata/{id}?language=en")
     return f"{r['song']} by {r['artist']}"
 
 def get_box_chill():
-    return process_box('1ae42584-729c-4f36-9f8f-f0be92a95bff')
+    return process_box('c8053d10-b3b7-496e-a0c3-101c70bc703e')
 
 def get_box_lofi():
-    return process_box('70a198a4-c4eb-4f17-82c9-db07cd0361af')
+    return process_box('ce5cc6e1-b50f-4b0a-a491-b68a3d0aa977')
 
 def get_hiphop():
-    return process_box('cf8999a0-b919-440c-95df-bab46db6b19c')
+    return process_box('3918b41c-bbcd-464f-b5cf-3ea6949c5544')
 
 def process_chillhop(id):
     r=get_json(f"https://stream.chillhop.com/live/{id}")[0]
