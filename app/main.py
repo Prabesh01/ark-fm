@@ -300,7 +300,7 @@ sp_activities={} # {"saaan_dc_id":{track:,user:,count:}}
 sp_users = {} # {prabesh_sp_uid:{"token":}}
 spotify_active_sockets = set()
 
-spotify_users_file = os.path.join(base_dir, 'spotify_users.json')
+spotify_users_file = os.path.join(base_dir, 'data', 'spotify_users.json')
 spotify_users = {}
 if os.path.exists(spotify_users_file):
     try:
@@ -433,6 +433,69 @@ def register_spotify_user(uid, refresh_token, access_token=None, expires_in=3600
     sp_users[uid] = {'token': refresh_token}
     save_spotify_users()
 
+def play_track_on_user_device(sp_token, track):
+    if not sp_token or not track:
+        return False, "Missing authentication or track"
+
+    headers = {"Authorization": f"Bearer {sp_token}"}
+    track_uri = track if track.startswith("spotify:track:") else f"spotify:track:{track}"
+
+    device_id = None
+    try:
+        dev_resp = requests.get("https://api.spotify.com/v1/me/player/devices", headers=headers, timeout=5)
+        if dev_resp.status_code == 200:
+            devices = dev_resp.json().get('devices', [])
+            # Priority 1: currently active device that is not restricted
+            for d in devices:
+                if d.get('is_active') and not d.get('is_restricted'):
+                    device_id = d.get('id')
+                    break
+            # Priority 2: any non-restricted device
+            if not device_id:
+                for d in devices:
+                    if not d.get('is_restricted') and d.get('id'):
+                        device_id = d.get('id')
+                        break
+    except Exception as e:
+        print(f"Error checking Spotify devices: {e}")
+
+    url = "https://api.spotify.com/v1/me/player/play"
+    if device_id:
+        url += f"?device_id={device_id}"
+
+    payload = {
+        "uris": [track_uri],
+        "position_ms": 0
+    }
+
+    try:
+        rr = requests.put(url, headers=headers, json=payload, timeout=6)
+        if rr.status_code not in (200, 204):
+            err_msg = "Could not start playback on your Spotify player."
+            try:
+                err_data = rr.json()
+                err_msg = err_data.get('error', {}).get('message', err_msg)
+            except:
+                pass
+            return False, err_msg
+
+        # Android / Mobile Connect quirk workaround:
+        # Spotify mobile apps often accept `uris` (returning 204), unload the old song,
+        # but pause rather than automatically starting the new track.
+        # We verify player state and send a resume trigger if it was left paused.
+        time.sleep(0.35)
+        state_resp = requests.get("https://api.spotify.com/v1/me/player", headers=headers, timeout=4)
+        if state_resp.status_code == 200 and state_resp.text.strip():
+            state = state_resp.json()
+            if not state.get('is_playing'):
+                # Send resume command directly to device
+                requests.put(url, headers=headers, timeout=4)
+
+        return True, "OK"
+    except Exception as e:
+        print(f"Exception in play_track_on_user_device: {e}")
+        return False, str(e)
+
 def set_user_activity(uid, track, user, profile, title, artist, cover, start=None):
     global listen_alongs, sp_activities, sp_users
     if not start:
@@ -460,13 +523,8 @@ def set_user_activity(uid, track, user, profile, title, artist, cover, start=Non
         for listener_spid in list(listen_alongs[uid]):
             listener_token = get_user_access_token(listener_spid)
             if listener_token:
-                rr = requests.put(
-                    "https://api.spotify.com/v1/me/player/play",
-                    headers={"Authorization": "Bearer " + listener_token},
-                    json={"uris": ["spotify:track:" + track]},
-                    timeout=5
-                )
-                if rr.status_code in (200, 204):
+                success, _ = play_track_on_user_device(listener_token, track)
+                if success:
                     continue
             if listener_spid in listen_alongs[uid]:
                 listen_alongs[uid].remove(listener_spid)
@@ -633,23 +691,30 @@ def sp_home():
     sp_uid=None
     profile_img=""
     if sp_token:
-        r=requests.get('https://api.spotify.com/v1/me',headers = {"Authorization":"Bearer "+sp_token})
-        if r.status_code==200:
-            udata=r.json()
-            user=udata.get('display_name') or udata.get('id')
-            sp_uid=udata.get('id')
-            if udata.get('images'):
-                profile_img = udata['images'][0]['url']
-        elif sp_refresh:
-            sp_token = (sp_uid_cookie and get_user_access_token(sp_uid_cookie)) or sp_rf_token(sp_refresh)
-            if sp_token:
-                r=requests.get('https://api.spotify.com/v1/me',headers = {"Authorization":"Bearer "+sp_token})
+        try:
+            r=requests.get('https://api.spotify.com/v1/me',headers = {"Authorization":"Bearer "+sp_token}, timeout=8)
+            if r.status_code==200:
+                udata=r.json()
+                user=udata.get('display_name') or udata.get('id')
+                sp_uid=udata.get('id')
+                if udata.get('images'):
+                    profile_img = udata['images'][0].get('url', '')
+        except Exception as e:
+            print(f"Error in sp_home checking access token: {e}")
+
+    if not user and sp_refresh:
+        sp_token = (sp_uid_cookie and get_user_access_token(sp_uid_cookie)) or sp_rf_token(sp_refresh)
+        if sp_token:
+            try:
+                r=requests.get('https://api.spotify.com/v1/me',headers = {"Authorization":"Bearer "+sp_token}, timeout=8)
                 if r.status_code==200:
                     udata=r.json()
                     user=udata.get('display_name') or udata.get('id')
                     sp_uid=udata.get('id')
                     if udata.get('images'):
-                        profile_img = udata['images'][0]['url']
+                        profile_img = udata['images'][0].get('url', '')
+            except Exception as e:
+                print(f"Error in sp_home checking refreshed token: {e}")
 
     html_content = render_template('spotify.html', user=user, spotify_client_id=spotify_client_id, domain=domain)
     resp = make_response(html_content)
@@ -777,13 +842,8 @@ def listen_along(data):
         emit('error', {"message": "Could not authenticate with Spotify."})
         return
 
-    rr=requests.put("https://api.spotify.com/v1/me/player/play",headers={"Authorization":"Bearer "+sp_token},json={"uris":["spotify:track:"+track]})
-    if rr.status_code not in (200, 204):
-        err_msg = "Could not start playback on your Spotify player."
-        try:
-            err_msg = rr.json()['error']['message']
-        except:
-            pass
+    success, err_msg = play_track_on_user_device(sp_token, track)
+    if not success:
         emit('error', {"message": err_msg})
         return
 
@@ -828,30 +888,91 @@ def sp_activity_rm():
 
 @app.get('/callback')
 def sp_callback():
-    code = request.args.get('code')
-    r=requests.post("https://accounts.spotify.com/api/token",data={"grant_type":"authorization_code","code":code,"redirect_uri":f"https://{domain}/callback","client_id":spotify_client_id,"client_secret":spotify_client_secret}).json()
-    if not 'access_token' in r: return render_template('spotify.html',alert="Spotify Oauth Failed! Try again later.")
+    error = request.args.get('error')
+    if error:
+        print(f"Spotify authorization error in callback: {error}")
+        return render_template('spotify.html', alert=f"Spotify Authorization Failed: {error}")
 
-    user=requests.get('https://api.spotify.com/v1/me',headers = {"Authorization":"Bearer "+r['access_token']}).json()
-    html_content = redirect('/spotify')
-    resp = make_response(html_content)
+    code = request.args.get('code')
+    if not code:
+        return render_template('spotify.html', alert="Missing authorization code from Spotify.")
+
+    try:
+        token_resp = requests.post(
+            "https://accounts.spotify.com/api/token",
+            data={
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": f"https://{domain}/callback",
+                "client_id": spotify_client_id,
+                "client_secret": spotify_client_secret
+            },
+            timeout=10
+        )
+    except Exception as e:
+        print(f"Exception during Spotify token exchange: {e}")
+        return render_template('spotify.html', alert="Network error during Spotify authorization.")
+
+    if token_resp.status_code != 200:
+        print(f"Spotify token exchange failed ({token_resp.status_code}): {token_resp.text}")
+        return render_template('spotify.html', alert="Spotify OAuth Failed! Try again later.")
+
+    try:
+        r = token_resp.json()
+    except Exception as e:
+        print(f"Error parsing token JSON: {e}, text: {token_resp.text}")
+        return render_template('spotify.html', alert="Spotify OAuth Failed: Invalid token response.")
+
+    access_token = r.get('access_token')
+    refresh_token = r.get('refresh_token')
+    if not access_token or not refresh_token:
+        print(f"Missing tokens in response: {r}")
+        return render_template('spotify.html', alert="Spotify OAuth Failed! Incomplete token data.")
+
+    try:
+        user_resp = requests.get(
+            'https://api.spotify.com/v1/me',
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=10
+        )
+    except Exception as e:
+        print(f"Exception fetching Spotify user profile: {e}")
+        return render_template('spotify.html', alert="Network error fetching user profile.")
+
+    if user_resp.status_code != 200:
+        print(f"Spotify /v1/me failed ({user_resp.status_code}): {user_resp.text}")
+        return render_template('spotify.html', alert=f"Failed to fetch Spotify profile ({user_resp.status_code}).")
+
+    try:
+        user = user_resp.json()
+    except Exception as e:
+        print(f"Error parsing /v1/me JSON: {e}, text: {user_resp.text}")
+        return render_template('spotify.html', alert="Failed to parse Spotify user profile.")
+
+    user_id = user.get('id')
+    if not user_id:
+        print(f"User response missing 'id': {user}")
+        return render_template('spotify.html', alert="Spotify user profile missing user ID.")
 
     profile_img = ""
     if user.get('images'):
-        profile_img = user['images'][0]['url']
+        profile_img = user['images'][0].get('url', '')
+
+    display_name = user.get('display_name') or user_id
 
     register_spotify_user(
-        uid=user['id'],
-        refresh_token=r['refresh_token'],
-        access_token=r['access_token'],
+        uid=user_id,
+        refresh_token=refresh_token,
+        access_token=access_token,
         expires_in=r.get('expires_in', 3600),
-        display_name=user.get('display_name') or user['id'],
+        display_name=display_name,
         profile_image=profile_img
     )
 
-    resp.set_cookie('refresh_token', r['refresh_token'], path='/', httponly=True, samesite='Lax')
-    resp.set_cookie('access_token', r['access_token'], path='/', httponly=True, samesite='Lax')
-    resp.set_cookie('user_id', user['id'], path='/', httponly=True, samesite='Lax')
+    resp = make_response(redirect('/spotify'))
+    resp.set_cookie('refresh_token', refresh_token, path='/', httponly=True, samesite='Lax')
+    resp.set_cookie('access_token', access_token, path='/', httponly=True, samesite='Lax')
+    resp.set_cookie('user_id', user_id, path='/', httponly=True, samesite='Lax')
     return resp
 
 @app.get('/playlist')

@@ -3,6 +3,8 @@ services:
     image: ghcr.io/prabesh01/ark-fm:latest
     restart: unless-stopped
     env_file: .env
+    volumes:
+      - ./data:/app/data
     ports:
       - "127.0.0.1:5000:5000"
 
