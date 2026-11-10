@@ -298,6 +298,23 @@ def handle_connect():
 listen_alongs = {} # {"saan":"prabesh_sp_uid"}
 sp_activities={} # {"saaan_dc_id":{track:,user:,count:}}
 sp_users = {} # {prabesh_sp_uid:{"token":}}
+spotify_active_sockets = set()
+
+spotify_users_file = os.path.join(base_dir, 'spotify_users.json')
+spotify_users = {}
+if os.path.exists(spotify_users_file):
+    try:
+        with open(spotify_users_file, 'r') as f:
+            spotify_users = json.load(f)
+    except Exception as e:
+        print(f"Error loading {spotify_users_file}: {e}")
+        spotify_users = {}
+
+_startup_now = time.time()
+for _idx, (_u_id, _u_info) in enumerate(spotify_users.items()):
+    if _u_info.get('refresh_token'):
+        sp_users[_u_id] = {'token': _u_info['refresh_token']}
+    _u_info['next_poll'] = _startup_now + (_idx * 0.5)
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -310,6 +327,9 @@ def handle_disconnect():
           emit('online_update', {
               'total_users': len(chat_users)
           }, room='chat_room')
+    sp_uid = request.cookies.get('user_id')
+    if sp_uid and sp_uid in spotify_active_sockets:
+        spotify_active_sockets.discard(sp_uid)
 
 @socketio.on('send_message')
 def handle_send_message(data):
@@ -329,29 +349,307 @@ def handle_send_message(data):
     
     emit('new_message', message_data, room='chat_room')
 
+def save_spotify_users():
+    try:
+        with open(spotify_users_file, 'w') as f:
+            json.dump(spotify_users, f, indent=2)
+    except Exception as e:
+        print(f"Error saving {spotify_users_file}: {e}")
+
 def sp_rf_token(sp_refresh):
-    r=requests.post("https://accounts.spotify.com/api/token",data={"grant_type":"refresh_token","refresh_token":sp_refresh},auth=(spotify_client_id,spotify_client_secret))
-    if r.status_code==200:
-        sp_token=r.json()['access_token']
-    else: sp_token=None
-    return sp_token
+    r = requests.post(
+        "https://accounts.spotify.com/api/token",
+        data={"grant_type": "refresh_token", "refresh_token": sp_refresh},
+        auth=(spotify_client_id, spotify_client_secret),
+        timeout=10
+    )
+    if r.status_code == 200:
+        return r.json().get('access_token')
+    return None
+
+def get_user_access_token(uid):
+    user_info = spotify_users.get(uid)
+    now = time.time()
+    if user_info:
+        if user_info.get('access_token') and user_info.get('expires_at', 0) > (now + 60):
+            return user_info['access_token']
+        refresh_token = user_info.get('refresh_token')
+    elif uid in sp_users and 'token' in sp_users[uid]:
+        refresh_token = sp_users[uid]['token']
+    else:
+        return None
+
+    if not refresh_token:
+        return None
+
+    try:
+        r = requests.post(
+            "https://accounts.spotify.com/api/token",
+            data={"grant_type": "refresh_token", "refresh_token": refresh_token},
+            auth=(spotify_client_id, spotify_client_secret),
+            timeout=10
+        )
+        if r.status_code == 200:
+            data = r.json()
+            new_access = data.get('access_token')
+            expires_in = data.get('expires_in', 3600)
+            if user_info:
+                user_info['access_token'] = new_access
+                user_info['expires_at'] = now + expires_in
+                if 'refresh_token' in data:
+                    user_info['refresh_token'] = data['refresh_token']
+                    if uid in sp_users:
+                        sp_users[uid]['token'] = data['refresh_token']
+                save_spotify_users()
+            return new_access
+        else:
+            print(f"Failed to refresh token for {uid}: {r.status_code} {r.text}")
+            if user_info and r.status_code in (400, 401):
+                user_info['auth_failed'] = True
+                save_spotify_users()
+            return None
+    except Exception as e:
+        print(f"Exception refreshing token for {uid}: {e}")
+        return None
+
+def register_spotify_user(uid, refresh_token, access_token=None, expires_in=3600, display_name=None, profile_image=None):
+    global spotify_users, sp_users
+    now = time.time()
+    user_info = spotify_users.get(uid, {})
+    user_info['refresh_token'] = refresh_token
+    if access_token:
+        user_info['access_token'] = access_token
+        user_info['expires_at'] = now + expires_in
+    if display_name:
+        user_info['display_name'] = display_name
+    elif not user_info.get('display_name'):
+        user_info['display_name'] = uid
+    if profile_image is not None:
+        user_info['profile_image'] = profile_image
+    user_info['auth_failed'] = False
+    user_info['idle_count'] = 0
+    user_info['next_poll'] = now
+    spotify_users[uid] = user_info
+    sp_users[uid] = {'token': refresh_token}
+    save_spotify_users()
+
+def set_user_activity(uid, track, user, profile, title, artist, cover, start=None):
+    global listen_alongs, sp_activities, sp_users
+    if not start:
+        start = time.time()
+
+    previous_track = sp_activities.get(uid, {}).get('track')
+    count = sp_activities.get(uid, {}).get('count', 0)
+
+    sp_data = {
+        "track": track,
+        "user": user,
+        "profile": profile,
+        "title": title,
+        "artist": artist,
+        "cover": cover,
+        "count": count,
+        "start": start,
+        "uid": uid
+    }
+    sp_activities[uid] = sp_data
+    socketio.emit('sp_update', sp_data, room='spotify')
+
+    # Only sync playback to listeners if the track has actually changed
+    if uid in listen_alongs and previous_track != track:
+        for listener_spid in list(listen_alongs[uid]):
+            listener_token = get_user_access_token(listener_spid)
+            if listener_token:
+                rr = requests.put(
+                    "https://api.spotify.com/v1/me/player/play",
+                    headers={"Authorization": "Bearer " + listener_token},
+                    json={"uris": ["spotify:track:" + track]},
+                    timeout=5
+                )
+                if rr.status_code in (200, 204):
+                    continue
+            if listener_spid in listen_alongs[uid]:
+                listen_alongs[uid].remove(listener_spid)
+                la_cnt = len(listen_alongs[uid])
+                socketio.emit('count_update', {"uid": uid, "count": la_cnt}, room='spotify')
+                sp_activities[uid]['count'] = la_cnt
+
+def remove_user_activity(uid):
+    global sp_activities
+    if uid in sp_activities:
+        sp_activities.pop(uid, None)
+        socketio.emit('sp_remove', {"uid": uid}, room='spotify')
+
+def handle_user_inactive(uid, user_info):
+    now = time.time()
+    user_info['is_active'] = False
+    user_info['current_track'] = None
+    idle_count = user_info.get('idle_count', 0) + 1
+    user_info['idle_count'] = idle_count
+
+    remove_user_activity(uid)
+
+    # Industry standard tiered backoff:
+    # 30s -> 60s (1m) -> 120s (2m) -> 300s (5m steady state)
+    idle_tiers = [30, 60, 120, 300]
+    tier_idx = min(idle_count - 1, len(idle_tiers) - 1)
+    interval = idle_tiers[tier_idx]
+
+    # Active site presence boost: if user has /spotify page open, don't back off to 5 min
+    if uid in spotify_active_sockets:
+        interval = min(interval, 45)
+
+    user_info['next_poll'] = now + interval
+    save_spotify_users()
+
+def poll_single_user(uid):
+    user_info = spotify_users.get(uid)
+    if not user_info or user_info.get('auth_failed'):
+        return
+
+    token = get_user_access_token(uid)
+    now = time.time()
+    if not token:
+        user_info['next_poll'] = now + 120
+        save_spotify_users()
+        return
+
+    try:
+        resp = requests.get(
+            "https://api.spotify.com/v1/me/player/currently-playing",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=8
+        )
+    except Exception as e:
+        print(f"Error querying Spotify player for {uid}: {e}")
+        user_info['next_poll'] = now + 30
+        return
+
+    user_info['last_poll'] = now
+
+    if resp.status_code == 429:
+        retry_after = int(resp.headers.get('Retry-After', 10))
+        user_info['next_poll'] = now + retry_after + 2
+        save_spotify_users()
+        return
+
+    if resp.status_code == 401:
+        user_info['expires_at'] = 0
+        user_info['next_poll'] = now + 5
+        save_spotify_users()
+        return
+
+    if resp.status_code == 204 or not resp.text.strip():
+        handle_user_inactive(uid, user_info)
+        return
+
+    if resp.status_code == 200:
+        try:
+            data = resp.json()
+        except:
+            handle_user_inactive(uid, user_info)
+            return
+
+        is_playing = data.get('is_playing', False)
+        item = data.get('item')
+        if not is_playing or not item or item.get('type') != 'track':
+            handle_user_inactive(uid, user_info)
+            return
+
+        track_id = item.get('id')
+        if not track_id:
+            handle_user_inactive(uid, user_info)
+            return
+
+        title = item.get('name', 'Unknown')
+        artists = ", ".join(a.get('name', '') for a in item.get('artists', []))
+        duration_ms = item.get('duration_ms', 0)
+        progress_ms = data.get('progress_ms', 0)
+        images = item.get('album', {}).get('images', [])
+        cover = images[0]['url'] if images else ""
+
+        timestamp_ms = data.get('timestamp') or int(now * 1000)
+        start_ts = (timestamp_ms - progress_ms) / 1000.0
+
+        user_name = user_info.get('display_name') or uid
+        profile_img = user_info.get('profile_image') or ""
+
+        set_user_activity(
+            uid=uid,
+            track=track_id,
+            user=user_name,
+            profile=profile_img,
+            title=title,
+            artist=artists,
+            cover=cover,
+            start=start_ts
+        )
+
+        user_info['idle_count'] = 0
+        user_info['current_track'] = track_id
+        user_info['is_active'] = True
+
+        # Adaptive interval calculation
+        remaining_sec = max(0, (duration_ms - progress_ms) / 1000.0)
+        if remaining_sec <= 20:
+            next_interval = max(5, int(remaining_sec) + 1)
+        else:
+            next_interval = 15
+
+        user_info['next_poll'] = now + next_interval
+        save_spotify_users()
+        return
+
+    user_info['next_poll'] = now + 60
+    save_spotify_users()
+
+def spotify_worker_tick():
+    now = time.time()
+    due_users = []
+    for uid, info in list(spotify_users.items()):
+        if info.get('auth_failed'):
+            continue
+        if info.get('next_poll', 0) <= now:
+            due_users.append(uid)
+            info['next_poll'] = now + 30
+
+    for uid in due_users:
+        socketio.start_background_task(poll_single_user, uid)
+
+scheduler.add_job(
+    func=spotify_worker_tick,
+    trigger=IntervalTrigger(seconds=3),
+    id='spotify_poller_task',
+    name='Spotify Poller Worker',
+    replace_existing=True
+)
 
 @app.get('/spotify')
 def sp_home():
     sp_token=request.cookies.get('access_token')
     sp_refresh=request.cookies.get('refresh_token')
+    sp_uid_cookie=request.cookies.get('user_id')
     user=None
+    sp_uid=None
+    profile_img=""
     if sp_token:
         r=requests.get('https://api.spotify.com/v1/me',headers = {"Authorization":"Bearer "+sp_token})
         if r.status_code==200:
-            user=r.json()['display_name']
-            sp_uid=r.json()['id']
+            udata=r.json()
+            user=udata.get('display_name') or udata.get('id')
+            sp_uid=udata.get('id')
+            if udata.get('images'):
+                profile_img = udata['images'][0]['url']
         elif sp_refresh:
-            sp_token=sp_rf_token(sp_refresh)
+            sp_token = (sp_uid_cookie and get_user_access_token(sp_uid_cookie)) or sp_rf_token(sp_refresh)
             if sp_token:
-                r=requests.get('https://api.spotify.com/v1/me',headers = {"Authorization":"Bearer "+sp_token}).json()
-                user=r['display_name']
-                sp_uid=r['id']
+                r=requests.get('https://api.spotify.com/v1/me',headers = {"Authorization":"Bearer "+sp_token})
+                if r.status_code==200:
+                    udata=r.json()
+                    user=udata.get('display_name') or udata.get('id')
+                    sp_uid=udata.get('id')
+                    if udata.get('images'):
+                        profile_img = udata['images'][0]['url']
 
     html_content = render_template('spotify.html', user=user, spotify_client_id=spotify_client_id, domain=domain)
     resp = make_response(html_content)
@@ -360,8 +658,13 @@ def sp_home():
         resp.delete_cookie('access_token', path='/')
         resp.delete_cookie('user_id', path='/')
     else:
-        global sp_users
-        sp_users[sp_uid]={'token':sp_refresh}
+        register_spotify_user(
+            uid=sp_uid,
+            refresh_token=sp_refresh,
+            access_token=sp_token,
+            display_name=user,
+            profile_image=profile_img
+        )
         resp.set_cookie('refresh_token', sp_refresh, path='/', httponly=True, samesite='Lax')
         resp.set_cookie('access_token', sp_token, path='/', httponly=True, samesite='Lax')
         resp.set_cookie('user_id', sp_uid, path='/', httponly=True, samesite='Lax')
@@ -370,6 +673,11 @@ def sp_home():
 @socketio.on('hi_spotify')
 def handle_spotify_con(data):
     sp_uid = request.cookies.get('user_id','')
+    if sp_uid:
+        spotify_active_sockets.add(sp_uid)
+        if sp_uid in spotify_users:
+            spotify_users[sp_uid]['next_poll'] = time.time()
+
     leave_room('chat_room')
     socketio.emit('sp_list', sp_activities)
     join_room('spotify')
@@ -389,7 +697,12 @@ def stop_listen_along():
 
     rr=requests.put("https://api.spotify.com/v1/me/player/pause",headers={"Authorization":"Bearer "+sp_token})
     if rr.status_code!=200:
-        emit('error', {"message":rr.json()['error']['message'] })
+        err_msg = "Could not pause playback."
+        try:
+            err_msg = rr.json()['error']['message']
+        except:
+            pass
+        emit('error', {"message": err_msg})
         return
 
     for la in listen_alongs:
@@ -398,14 +711,13 @@ def stop_listen_along():
             la_cnt=len(listen_alongs[la])
             socketio.emit('count_update', {"uid":la,"count":la_cnt} , room='spotify')
             sp_activities[la]['count']=la_cnt
-    del sp_users[sp_uid]
 
 @socketio.on('add_to_playlist')
 def add_to_playlist(data):
     track = data.get('track','').strip()
-    sp_token = request.cookies.get('access_token')
-    sp_refresh=request.cookies.get('refresh_token')
     user_id = request.cookies.get('user_id')
+    sp_token = (user_id and get_user_access_token(user_id)) or request.cookies.get('access_token')
+    sp_refresh = request.cookies.get('refresh_token')
 
     pl_name="ark - listen along"
 
@@ -417,7 +729,10 @@ def add_to_playlist(data):
     while url:
         response = requests.get(url, headers=headers)
         if response.status_code != 200:
-            sp_token=sp_rf_token(sp_refresh)
+            sp_token = (user_id and get_user_access_token(user_id)) or sp_rf_token(sp_refresh)
+            if not sp_token:
+                emit('error', {"message":"Try again later!" })
+                return
             headers={"Authorization":"Bearer "+sp_token}
             response = requests.get(url, headers=headers)
             if response.status_code != 200:
@@ -430,7 +745,7 @@ def add_to_playlist(data):
                     the_pl=playlist['id']
                     break
         if the_pl: break
-        url = data.get('next')
+        url = response.json().get('next')
 
     if not the_pl:
         the_pl=requests.post(f"https://api.spotify.com/v1/users/{user_id}/playlists",headers = {"Authorization":"Bearer "+sp_token},json={"name":pl_name, "public": False}).json()['id']
@@ -457,10 +772,19 @@ def listen_along(data):
             socketio.emit('count_update', {"uid":la,"count":la_cnt} , room='spotify')
             sp_activities[la]['count']=la_cnt
 
-    sp_token=sp_rf_token(sp_refresh)
+    sp_token = (user_id and get_user_access_token(user_id)) or sp_rf_token(sp_refresh)
+    if not sp_token:
+        emit('error', {"message": "Could not authenticate with Spotify."})
+        return
+
     rr=requests.put("https://api.spotify.com/v1/me/player/play",headers={"Authorization":"Bearer "+sp_token},json={"uris":["spotify:track:"+track]})
-    if rr.status_code!=204:
-        emit('error', {"message":rr.json()['error']['message'] })
+    if rr.status_code not in (200, 204):
+        err_msg = "Could not start playback on your Spotify player."
+        try:
+            err_msg = rr.json()['error']['message']
+        except:
+            pass
+        emit('error', {"message": err_msg})
         return
 
     if not uid in listen_alongs: listen_alongs[uid]=[]
@@ -469,76 +793,41 @@ def listen_along(data):
     socketio.emit('count_update', {"uid":uid,"count":la_cnt} , room='spotify')
     sp_activities[uid]['count']=la_cnt
 
-
 @app.get('/activity_seek')
 def sp_activity_seek():
     return 'meh'
-    uid = request.args.get('uid')
-    seek = int(request.args.get('seek'))
-    if not uid in sp_activities: return 'UID khoi'
-
-    position_ms = int((datetime.now(timezone.utc).timestamp() - sp_activities[uid]['start'])*1000)
-    position_ms+=seek
-
-    if uid in listen_alongs:
-        for listener_spid in listen_alongs[uid]:
-            listener_refresh = sp_users[listener_spid]['token']
-            listener_token=sp_rf_token(listener_refresh)
-            if listener_token:
-                rr=requests.put("https://api.spotify.com/v1/me/player/seek",headers={"Authorization":"Bearer "+listener_token},params={"position_ms":position_ms})
-    return 'OK'
 
 @app.get('/activity')
 def sp_activity():
-    global listen_alongs,sp_activities, sp_users
     track = request.args.get('track')
     uid = request.args.get('uid')
     user = request.args.get('user')
     profile = request.args.get('profile')
     title = request.args.get('title')
-    artist=request.args.get('artist')
-    cover=request.args.get('cover')
-    start=request.args.get('start')
-    if start: start = datetime.fromisoformat(start.replace(' 00:00', '+00:00')).timestamp()
-    else: start=datetime.now(timezone.utc).timestamp()
+    artist = request.args.get('artist')
+    cover = request.args.get('cover')
+    start = request.args.get('start')
+    if start:
+        try:
+            start = datetime.fromisoformat(start.replace(' 00:00', '+00:00')).timestamp()
+        except:
+            start = time.time()
+    else:
+        start = time.time()
 
-    count=0
-    if uid in sp_activities: count = sp_activities[uid]['count']
-    sp_data={"track":track,"user":user,"profile":profile,"title":title,"artist": artist,"cover":cover,"count":count,"start":start}
-    sp_activities[uid]=sp_data
-    sp_data['uid']=uid
-    socketio.emit('sp_update', sp_data , room='spotify')
-
-    if uid in listen_alongs:
-        for listener_spid in listen_alongs[uid]:
-            listener_refresh = sp_users[listener_spid]['token']
-            listener_token=sp_rf_token(listener_refresh)
-            if listener_token:
-                rr=requests.put("https://api.spotify.com/v1/me/player/play",headers={"Authorization":"Bearer "+listener_token},json={"uris":["spotify:track:"+track]})
-                if rr.status_code==204:
-                    continue
-            del sp_users[listener_spid]                    
-            listen_alongs[uid].remove(listener_spid)
-            la_cnt=len(listen_alongs[uid])
-            socketio.emit('count_update', {"uid":uid,"count":la_cnt} , room='spotify')
-            sp_activities[uid]['count']=la_cnt
-
+    set_user_activity(uid=uid, track=track, user=user, profile=profile,
+                      title=title, artist=artist, cover=cover, start=start)
     return 'OK'
 
 @app.get('/activity_rm')
 def sp_activity_rm():
     uid = request.args.get('uid')
-
-    sp_activities.pop(uid,None)
-    socketio.emit('sp_remove', {"uid":uid} , room='spotify')
-
-    # listen_alongs.pop(uid,None)
-
+    if uid:
+        remove_user_activity(uid)
     return 'OK'
 
 @app.get('/callback')
 def sp_callback():
-    global sp_users
     code = request.args.get('code')
     r=requests.post("https://accounts.spotify.com/api/token",data={"grant_type":"authorization_code","code":code,"redirect_uri":f"https://{domain}/callback","client_id":spotify_client_id,"client_secret":spotify_client_secret}).json()
     if not 'access_token' in r: return render_template('spotify.html',alert="Spotify Oauth Failed! Try again later.")
@@ -547,10 +836,22 @@ def sp_callback():
     html_content = redirect('/spotify')
     resp = make_response(html_content)
 
+    profile_img = ""
+    if user.get('images'):
+        profile_img = user['images'][0]['url']
+
+    register_spotify_user(
+        uid=user['id'],
+        refresh_token=r['refresh_token'],
+        access_token=r['access_token'],
+        expires_in=r.get('expires_in', 3600),
+        display_name=user.get('display_name') or user['id'],
+        profile_image=profile_img
+    )
+
     resp.set_cookie('refresh_token', r['refresh_token'], path='/', httponly=True, samesite='Lax')
     resp.set_cookie('access_token', r['access_token'], path='/', httponly=True, samesite='Lax')
     resp.set_cookie('user_id', user['id'], path='/', httponly=True, samesite='Lax')
-    sp_users[user['id']]={"token":r['refresh_token']}
     return resp
 
 @app.get('/playlist')
