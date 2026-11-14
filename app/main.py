@@ -29,6 +29,18 @@ ZENO_ICECAST_MOUNT=os.getenv("ZENO_ICECAST_MOUNT")
 ZENO_ICECAST_PASSWORD=os.getenv("ZENO_ICECAST_PASSWORD")
 domain=os.getenv("domain")
 
+discord_webhook=os.getenv("discord_webhook")
+EXCLUDED_NOTIFY_UID = "4iu5c737f2jidf8q6pnjqm2wb"
+notified_flags = {}
+
+def notify_discord_listen_along():
+    if not discord_webhook:
+        return
+    try:
+        requests.post(discord_webhook, json={"content": "spotify-listen along"}, timeout=5)
+    except Exception as e:
+        print(f"Discord webhook error: {e}")
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secrets.token_hex(16)
 app.config['SESSION_TYPE'] = 'filesystem'
@@ -541,6 +553,7 @@ def remove_user_activity(uid):
 def handle_user_inactive(uid, user_info):
     now = time.time()
     user_info['is_active'] = False
+    notified_flags.pop(uid, None)
     user_info['current_track'] = None
     idle_count = user_info.get('idle_count', 0) + 1
     user_info['idle_count'] = idle_count
@@ -642,6 +655,10 @@ def poll_single_user(uid):
             cover=cover,
             start=start_ts
         )
+
+        if uid != EXCLUDED_NOTIFY_UID and not notified_flags.get(uid):
+            notified_flags[uid] = True
+            notify_discord_listen_along()
 
         user_info['idle_count'] = 0
         user_info['current_track'] = track_id
