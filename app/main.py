@@ -571,6 +571,10 @@ def remove_user_activity(uid):
         sp_activities.pop(uid, None)
         socketio.emit('sp_remove', {"uid": uid}, room='spotify')
 
+def set_activity_count(uid, cnt):
+    if uid in sp_activities:
+        sp_activities[uid]['count'] = cnt
+
 def handle_user_inactive(uid, user_info):
     now = time.time()
     user_info['is_active'] = False
@@ -1027,7 +1031,7 @@ def stop_listen_along():
             listen_alongs[la].remove(sp_uid)
             la_cnt=len(listen_alongs[la])
             socketio.emit('count_update', {"uid":la,"count":la_cnt} , room='spotify')
-            sp_activities[la]['count']=la_cnt
+            set_activity_count(la, la_cnt)
 
 @socketio.on('add_to_playlist')
 def add_to_playlist(data):
@@ -1076,6 +1080,11 @@ def listen_along(data):
 
     uid = data.get('uid', '').strip()
     track = data.get('track','').strip()
+
+    if uid not in sp_activities:
+        emit('error', {"message": "That user isn't listening right now."})
+        return
+
     sp_refresh = request.cookies.get('refresh_token')
 
     if not user_id in sp_users: sp_users[user_id]={}
@@ -1087,7 +1096,7 @@ def listen_along(data):
             listen_alongs[la].remove(user_id)
             la_cnt=len(listen_alongs[la])
             socketio.emit('count_update', {"uid":la,"count":la_cnt} , room='spotify')
-            sp_activities[la]['count']=la_cnt
+            set_activity_count(la, la_cnt)
 
     sp_token = (user_id and get_user_access_token(user_id)) or sp_rf_token(sp_refresh)
     if not sp_token:
@@ -1103,7 +1112,7 @@ def listen_along(data):
     listen_alongs[uid].append(user_id)
     la_cnt=len(listen_alongs[uid])
     socketio.emit('count_update', {"uid":uid,"count":la_cnt} , room='spotify')
-    sp_activities[uid]['count']=la_cnt
+    set_activity_count(uid, la_cnt)
 
 @app.get('/activity_seek')
 def sp_activity_seek():
