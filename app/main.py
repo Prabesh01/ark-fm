@@ -30,16 +30,35 @@ ZENO_ICECAST_PASSWORD=os.getenv("ZENO_ICECAST_PASSWORD")
 domain=os.getenv("domain")
 
 discord_webhook=os.getenv("discord_webhook")
-EXCLUDED_NOTIFY_UID = "4iu5c737f2jidf8q6pnjqm2wb"
-notified_flags = {}
+EXCLUDED_NOTIFY_UIDS = ["4iu5c737f2jidf8q6pnjqm2wb"]   # spotify ids that never trigger an alert
+NOTIFY_COOLDOWN = 10 * 60      # seconds; set to 0 to disable the cooldown
+notified_flags = {}            # uid -> True while in an already-notified session
+last_notified_at = {}          # uid -> timestamp of last alert
 
-def notify_discord_listen_along():
+SP_DC = os.getenv("SPOTIFY_SP_DC")   # sp_dc cookie of the account whose friend feed is read
+
+def notify_discord_listen_along(name):
     if not discord_webhook:
         return
     try:
-        requests.post(discord_webhook, json={"content": "spotify-listen along"}, timeout=5)
+        requests.post(
+            discord_webhook,
+            json={"content": f"{name} - spotify-listen along",
+                  "allowed_mentions": {"parse": []}},   # a display name can't ping @everyone
+            timeout=5,
+        )
     except Exception as e:
         print(f"Discord webhook error: {e}")
+
+def maybe_notify(flag_uid, spotify_id, name):
+    """Shared by own-user polling and friend polling."""
+    if spotify_id in EXCLUDED_NOTIFY_UIDS or notified_flags.get(flag_uid):
+        return
+    notified_flags[flag_uid] = True        # set first so it can't double-fire
+    now = time.time()
+    if now - last_notified_at.get(flag_uid, 0) >= NOTIFY_COOLDOWN:
+        last_notified_at[flag_uid] = now
+        notify_discord_listen_along(name)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secrets.token_hex(16)
@@ -327,6 +346,8 @@ for _idx, (_u_id, _u_info) in enumerate(spotify_users.items()):
     if _u_info.get('refresh_token'):
         sp_users[_u_id] = {'token': _u_info['refresh_token']}
     _u_info['next_poll'] = _startup_now + (_idx * 0.5)
+    if _u_info.get('is_active'):
+        notified_flags[_u_id] = True
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -656,9 +677,7 @@ def poll_single_user(uid):
             start=start_ts
         )
 
-        if uid != EXCLUDED_NOTIFY_UID and not notified_flags.get(uid):
-            notified_flags[uid] = True
-            notify_discord_listen_along()
+        maybe_notify(uid, uid, user_name)
 
         user_info['idle_count'] = 0
         user_info['current_track'] = track_id
@@ -690,6 +709,222 @@ def spotify_worker_tick():
 
     for uid in due_users:
         socketio.start_background_task(poll_single_user, uid)
+
+# ======================= followed users' live activity =======================
+import base64, pyotp
+
+FRIEND_PREFIX = "friend:"
+FRIEND_STALE_WINDOW = 20 * 60
+TOTP_VER = 61
+TOTP_SECRET_BYTES = [44, 55, 47, 42, 70, 40, 34, 114, 76, 74, 50, 111, 120, 97, 75, 76, 94, 102, 43, 69, 49, 120, 118, 80, 64, 78]
+_web_token = {"value": None, "exp": 0}
+_app_token = {"value": None, "exp": 0}
+friend_uids = set()
+track_cache = {}
+user_cache = {}
+_friends_running = False
+
+def _make_totp(server_time):
+    transformed = [b ^ ((i % 33) + 9) for i, b in enumerate(TOTP_SECRET_BYTES)]
+    secret = base64.b32encode("".join(map(str, transformed)).encode()).decode().rstrip("=")
+    return pyotp.TOTP(secret).at(server_time)
+
+def get_web_token():
+    now = time.time()
+    if _web_token["value"] and now < _web_token["exp"] - 60:
+        return _web_token["value"]
+    headers = {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:156.0) Gecko/20100101 Firefox/156.0",
+        "Accept": "*/*",
+        "Referer": "https://open.spotify.com/",
+        "Cookie": f"sp_dc={SP_DC}",
+    }
+    st = requests.get("https://open.spotify.com/api/server-time", headers=headers, timeout=8).json()["serverTime"]
+    code = _make_totp(st)
+    r = requests.get(
+        "https://open.spotify.com/api/token",
+        params={"reason": "init", "productType": "web-player",
+                "totp": code, "totpServer": code, "totpVer": TOTP_VER},
+        headers=headers, timeout=8,
+    )
+    r.raise_for_status()
+    j = r.json()
+    if j.get("isAnonymous"):
+        raise RuntimeError("sp_dc rejected: got an anonymous web token")
+    _web_token["value"] = j["accessToken"]
+    _web_token["exp"] = j["accessTokenExpirationTimestampMs"] / 1000.0
+    return _web_token["value"]
+
+def get_app_token():
+    """Client-credentials token of YOUR app (own quota, enough for public track/user data)."""
+    now = time.time()
+    if _app_token["value"] and now < _app_token["exp"] - 60:
+        return _app_token["value"]
+    try:
+        r = requests.post(
+            "https://accounts.spotify.com/api/token",
+            data={"grant_type": "client_credentials"},
+            auth=(spotify_client_id, spotify_client_secret),
+            timeout=8,
+        )
+        r.raise_for_status()
+        j = r.json()
+        _app_token["value"] = j["access_token"]
+        _app_token["exp"] = now + j.get("expires_in", 3600)
+        return _app_token["value"]
+    except Exception as e:
+        print(f"App token error: {e}")
+        return None
+
+def _api_get(path, token, retries=4):
+    """GET with sleep-and-retry on 429 (honours Retry-After, capped at 60s)."""
+    for attempt in range(retries):
+        r = requests.get(f"https://api.spotify.com/v1/{path}",
+                         headers={"Authorization": f"Bearer {token}"}, timeout=8)
+        if r.status_code == 429 and attempt < retries - 1:
+            try:
+                ra = int(r.headers.get("Retry-After", 5))
+            except ValueError:
+                ra = 5
+            wait = min(ra, 60) + 1
+            print(f"Spotify API 429 on {path}, Retry-After={ra}s, sleeping {wait}s "
+                  f"(attempt {attempt + 1}/{retries})")
+            time.sleep(wait)
+            continue
+        r.raise_for_status()
+        return r.json()
+
+def meta_get(path):
+    """Metadata lookup: your app's token first, then an authorized user's bearer token."""
+    tok = get_app_token()
+    if tok:
+        try:
+            return _api_get(path, tok)
+        except requests.HTTPError as e:
+            if e.response is None or e.response.status_code not in (401, 403):
+                raise
+            _app_token["exp"] = 0
+    for u, info in list(spotify_users.items()):
+        if info.get('auth_failed'):
+            continue
+        t = get_user_access_token(u)
+        if t:
+            return _api_get(path, t)
+    raise RuntimeError("no token available for metadata lookup")
+
+def get_track_meta(tid):
+    if tid not in track_cache:
+        j = meta_get(f"tracks/{tid}")
+        imgs = j.get("album", {}).get("images", [])
+        track_cache[tid] = {
+            "title": j.get("name", "Unknown"),
+            "artist": ", ".join(a.get("name", "") for a in j.get("artists", [])),
+            "cover": imgs[0]["url"] if imgs else "",
+        }
+    return track_cache[tid]
+
+def get_user_meta(raw_id):
+    if raw_id not in user_cache:
+        try:
+            j = meta_get(f"users/{raw_id}")
+        except Exception as e:
+            print(f"User meta error for {raw_id}: {e}")
+            return {"name": raw_id, "image": ""}   # fallback, not cached so it retries later
+        imgs = j.get("images", [])
+        user_cache[raw_id] = {"name": j.get("display_name") or raw_id,
+                              "image": imgs[0]["url"] if imgs else ""}
+    return user_cache[raw_id]
+
+def poll_friends():
+    global _friends_running
+    if not SP_DC or _friends_running:
+        return
+    _friends_running = True
+    try:
+        _poll_friends()
+    finally:
+        _friends_running = False
+
+def _poll_friends():
+    now = time.time()
+    try:
+        token = get_web_token()
+        r = requests.post(
+            "https://spclient.wg.spotify.com/listening-activity/v1/feed",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+                "Content-Type": "application/json;charset=UTF-8",
+                "app-platform": "WebPlayer",
+                "Origin": "https://open.spotify.com",
+                "Referer": "https://open.spotify.com/",
+            },
+            json={"unused": True, "resultLimit": 100},
+            timeout=8,
+        )
+        if r.status_code == 401:
+            _web_token["exp"] = 0
+            return
+        r.raise_for_status()
+        entities = r.json().get("entities", [])
+    except Exception as e:
+        print(f"Friend feed error: {e}")
+        return
+
+    live_now = set()
+    for ent in entities:
+        try:
+            fe = ent.get("followEntity")
+            if not fe:
+                continue
+            act = fe.get("activity", {})
+            if not act.get("isPlaying"):
+                continue
+            if not fe["uri"].startswith("spotify:user:"):
+                continue
+            if not act.get("entityUri", "").startswith("spotify:track:"):
+                continue
+
+            raw_id = fe["uri"].split(":")[-1]
+            if raw_id in spotify_users:
+                continue  # already polled via their own authorization
+
+            ts = datetime.fromisoformat(act["timestamp"].replace("Z", "+00:00")).timestamp()
+            if now - ts > FRIEND_STALE_WINDOW:
+                continue
+
+            uid = FRIEND_PREFIX + raw_id
+            tid = act["entityUri"].split(":")[-1]
+            tm = get_track_meta(tid)
+            um = get_user_meta(raw_id)
+
+            set_user_activity(
+                uid=uid, track=tid, user=um["name"], profile=um["image"],
+                title=tm["title"], artist=tm["artist"], cover=tm["cover"], start=ts,
+            )
+            live_now.add(uid)
+            maybe_notify(uid, raw_id, um["name"])
+        except Exception as e:
+            print(f"Friend parse error: {e}")
+
+    # friends who are no longer live
+    for uid in list(friend_uids - live_now):
+        notified_flags.pop(uid, None)
+        remove_user_activity(uid)
+    friend_uids.clear()
+    friend_uids.update(live_now)
+
+def friends_tick():
+    socketio.start_background_task(poll_friends)
+
+scheduler.add_job(
+    func=friends_tick,
+    trigger=IntervalTrigger(seconds=20),
+    id='spotify_friends_task',
+    name='Spotify Friends Poller',
+    replace_existing=True,
+    max_instances=1,
+)
 
 scheduler.add_job(
     func=spotify_worker_tick,
