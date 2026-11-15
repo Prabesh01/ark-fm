@@ -30,7 +30,7 @@ ZENO_ICECAST_PASSWORD=os.getenv("ZENO_ICECAST_PASSWORD")
 domain=os.getenv("domain")
 
 discord_webhook=os.getenv("discord_webhook")
-EXCLUDED_NOTIFY_UIDS = ["4iu5c737f2jidf8q6pnjqm2wb"]   # spotify ids that never trigger an alert
+EXCLUDED_NOTIFY_UIDS = ["3177qshvdvpikwcgov52sw6epiju"]
 NOTIFY_COOLDOWN = 10 * 60      # seconds; set to 0 to disable the cooldown
 notified_flags = {}            # uid -> True while in an already-notified session
 last_notified_at = {}          # uid -> timestamp of last alert
@@ -52,7 +52,7 @@ def notify_discord_listen_along(name):
 
 def maybe_notify(flag_uid, spotify_id, name):
     """Shared by own-user polling and friend polling."""
-    if spotify_id in EXCLUDED_NOTIFY_UIDS or notified_flags.get(flag_uid):
+    if spotify_id not in EXCLUDED_NOTIFY_UIDS or notified_flags.get(flag_uid):
         return
     notified_flags[flag_uid] = True        # set first so it can't double-fire
     now = time.time()
@@ -890,8 +890,8 @@ def _poll_friends():
                 continue
 
             raw_id = fe["uri"].split(":")[-1]
-            if raw_id in spotify_users:
-                continue  # already polled via their own authorization
+            #if raw_id in spotify_users:
+            #    continue  # already polled via their own authorization
 
             ts = datetime.fromisoformat(act["timestamp"].replace("Z", "+00:00")).timestamp()
             if now - ts > FRIEND_STALE_WINDOW:
